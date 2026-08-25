@@ -19,6 +19,44 @@ const { buildRegistry, flattenCommands } = require('../utils/registry');
 const { loadProfiles, getActiveProfileName, setActiveProfileName } = require('../utils/profiles');
 const { formatInfo, formatSuccess, formatError, formatWarning } = require('../utils/formatter');
 
+// B3: Fuzzy matching — subsequence match with scoring (à la VS Code / fzf)
+// Returns { matched:bool, score:number, indices:number[] } for highlight support
+function fuzzyMatch(query, target) {
+  if (!query) return { matched: true, score: 0, indices: [] };
+  const q = query.toLowerCase();
+  const t = (target || '').toLowerCase();
+  let qi = 0, score = 0, prevIdx = -1;
+  const indices = [];
+  for (let ti = 0; ti < t.length && qi < q.length; ti++) {
+    if (t[ti] === q[qi]) {
+      indices.push(ti);
+      // Bonus: consecutive match
+      if (prevIdx === ti - 1) score += 8;
+      // Bonus: word boundary (start, or after space/-/_)
+      if (ti === 0 || /[\s\-_/.]/.test(t[ti - 1])) score += 10;
+      // Bonus: exact case match in original target
+      if (target[ti] === query[qi]) score += 2;
+      prevIdx = ti;
+      qi++;
+    }
+  }
+  const matched = qi === q.length;
+  // Prefer shorter targets with full match (density bonus)
+  if (matched) score += Math.max(0, 20 - (t.length - q.length));
+  return { matched, score: matched ? score : 0, indices };
+}
+
+// Highlight matched chars in a string by wrapping with []
+function highlightMatch(str, indices) {
+  if (!indices || !indices.length) return str;
+  const set = new Set(indices);
+  let out = '';
+  for (let i = 0; i < str.length; i++) {
+    out += set.has(i) ? '[' + str[i] + ']' : str[i];
+  }
+  return out;
+}
+
 function tuiModule(program) {
   program
     .command('tui')
@@ -106,14 +144,39 @@ function tuiModule(program) {
       ]);
 
       const term = (searchTerm || '').toLowerCase().trim();
-      const filteredChoices = term
-        ? choices.filter(c => {
-            if (c.type === 'separator') return false;
-            const name = (c.name || '').toLowerCase();
-            const path = (c.value || '').path || '';
-            return name.includes(term) || path.toLowerCase().includes(term);
-          })
-        : choices;
+      let filteredChoices;
+      if (!term) {
+        filteredChoices = choices;
+      } else {
+        // B3: Fuzzy match each command; rank by score; highlight matches
+        const scored = [];
+        choices.forEach(c => {
+          if (c.type === 'separator') return;
+          const cmd = c.value && typeof c.value === 'object' ? c.value : null;
+          const path = cmd ? cmd.path : '';
+          const desc = cmd ? (cmd.description || '') : '';
+          // Match against both path and description; keep best score
+          const m1 = fuzzyMatch(term, path);
+          const m2 = fuzzyMatch(term, desc);
+          const best = m1.score >= m2.score ? m1 : m2;
+          if (best.matched) {
+            const hi = m1.score >= m2.score
+              ? highlightMatch(c.name, best.indices)
+              : c.name;
+            scored.push({ c, score: best.score, display: hi });
+          }
+        });
+        // Sort by score descending, then alphabetically
+        scored.sort((a, b) => b.score - a.score || a.c.name.localeCompare(b.c.name));
+        filteredChoices = scored.map(s => ({
+          name: s.display,
+          value: s.c.value,
+          short: s.c.short,
+        }));
+        // Always keep Exit reachable
+        filteredChoices.push(new inquirer.Separator('────────────'));
+        filteredChoices.push({ name: '  Exit', value: 'exit', short: 'Exit' });
+      }
 
       if (filteredChoices.length === 0) {
         formatInfo('No matching commands. Try again.');

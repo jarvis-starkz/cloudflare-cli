@@ -24,11 +24,8 @@ jobs:
       - name: Install dependencies
         run: npm ci || npm install
 
-      - name: Syntax check
-        run: |
-          for f in src/index.js src/utils/*.js src/commands/*.js; do
-            node -c "$f" || exit 1
-          done
+      - name: Lint (syntax check all src + tests)
+        run: npm run lint
 
       - name: Run tests
         run: npm test

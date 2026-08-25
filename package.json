@@ -9,6 +9,7 @@
   "types": "types/cf-client.d.ts",
   "scripts": {
     "start": "node src/index.js",
+    "lint": "node -e \"const{readdirSync,statSync}=require('fs');const{execSync}=require('child_process');const files=[];function walk(d){readdirSync(d).forEach(f=>{const p=d+'/'+f;const s=statSync(p);if(s.isDirectory()&&!f.includes('node_modules')&&!f.startsWith('.'))walk(p);else if(f.endsWith('.js'))files.push(p);});}walk('src');walk('tests');let bad=0;files.forEach(f=>{try{execSync('node -c '+f,{stdio:'pipe'});}catch(e){console.error('Syntax error in '+f);console.error(e.stderr.toString());bad++;}});if(bad){console.error(bad+' file(s) failed syntax check');process.exit(1);}console.log(files.length+' files passed syntax check');\"",
     "test": "jest --runInBand",
     "test:cov": "jest --runInBand --coverage",
     "gui": "node src/index.js gui",

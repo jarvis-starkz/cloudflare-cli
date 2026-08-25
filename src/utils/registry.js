@@ -35,6 +35,44 @@ function extractOptions(cmd) {
 }
 
 /**
+ * Infer the HTTP method from a command path and description.
+ * Mapping based on Cloudflare API conventions and command naming patterns.
+ * @param {string} path
+ * @param {string} description
+ * @returns {{method: string, isWrite: boolean, overridesConfig: boolean}}
+ */
+function inferMethod(path, description) {
+  const name = path.split(' ').pop().toLowerCase();
+  const desc = (description || '').toLowerCase();
+  const isWrite = true;
+  let method = 'GET';
+  // DELETE operations
+  if (/^(delete|remove|rm|destroy|purge)$/.test(name) || desc.includes('delete ') || desc.includes('remove ') || desc.includes('purge ')) {
+    method = 'DELETE';
+  } else if (/^(create|add|new|import|upload|deploy|publish|activate)$/.test(name) || desc.includes('create ') || desc.includes('add ') || desc.includes('upload ') || desc.includes('deploy ') || desc.includes('publish ')) {
+    method = 'POST';
+  } else if (/^(update|modify|set|change|apply|edit|patch|enable|disable)$/.test(name) || desc.includes('update ') || desc.includes('modify ') || desc.includes('set ') || desc.includes('enable ') || desc.includes('disable ') || desc.includes('apply ')) {
+    method = name === 'patch' ? 'PATCH' : 'PUT';
+  } else if (/^(list|get|show|view|export|verify|check|inspect|search|stat|settings|status)$/.test(name) || desc.includes('list ') || desc.includes('get ') || desc.includes('show ') || desc.includes('export ') || desc.includes('verify ')) {
+    method = 'GET';
+  } else if (name === 'clear' || name === 'reset' || name === 'empty') {
+    method = 'DELETE';
+  }
+  const isWriteOp = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+  const overridesConfig = isWriteOp && (
+    method === 'DELETE' ||
+    desc.includes('overwrite') ||
+    desc.includes('replace') ||
+    desc.includes('clear') ||
+    desc.includes('reset') ||
+    desc.includes('remove') ||
+    desc.includes('purge') ||
+    (method === 'PUT' && !desc.includes('append') && !desc.includes('add '))
+  );
+  return { method, isWrite: isWriteOp, overridesConfig };
+}
+
+/**
  * Recursively walk a Commander command tree and extract metadata.
  * @param {import('commander').Command} cmd
  * @param {string} parentPath
@@ -60,6 +98,15 @@ function walkCommand(cmd, parentPath = '') {
       : undefined,
     subcommands: [],
   };
+
+  // Infer HTTP method + write/override metadata (only for leaf commands with actions)
+  const hasAction = typeof cmd.action === 'function' || cmd._actionHandler;
+  if (hasAction && (!cmd.commands || cmd.commands.length === 0)) {
+    const methodInfo = inferMethod(fullPath, node.description);
+    node.method = methodInfo.method;
+    node.isWrite = methodInfo.isWrite;
+    node.overridesConfig = methodInfo.overridesConfig;
+  }
 
   // Clean up undefined keys for compact JSON
   Object.keys(node).forEach(k => {
@@ -114,6 +161,9 @@ function flattenCommands(registry) {
         path: node.path,
         description: node.description,
         options: node.options || [],
+        method: node.method,
+        isWrite: node.isWrite,
+        overridesConfig: node.overridesConfig,
       });
       return;
     }

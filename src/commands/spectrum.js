@@ -1,14 +1,28 @@
 const CloudflareClient = require('../utils/cf-client');
 const { formatSuccess, formatError, formatTable, formatJson, formatInfo } = require('../utils/formatter');
 
+/**
+ * Spectrum 命令
+ *
+ * 功能说明：管理 Cloudflare Spectrum，为 TCP/UDP 应用提供 DDoS 防护和性能优化。
+ * Spectrum 将 Cloudflare 的安全性和性能优势扩展到所有基于 TCP 或 UDP 的应用程序，
+ * 不仅限于 HTTP/HTTPS 流量，支持 SSH、游戏服务器、VoIP 等非 HTTP 协议。
+ *
+ * 使用场景：
+ * - 保护 SSH 服务器免受 DDoS 攻击
+ * - 为游戏服务器提供低延迟连接
+ * - 保护 VoIP 和视频会议应用
+ * - 为数据库服务提供安全代理
+ * - 配置 TCP 负载均衡
+ */
 function spectrumCommands(program) {
-  const spectrum = program.command('spectrum').description('Manage Cloudflare Spectrum (Enterprise - TCP/UDP)');
+  const spectrum = program.command('spectrum').description('管理 Cloudflare Spectrum（企业级 TCP/UDP 应用防护，为非 HTTP 协议提供 DDoS 保护和性能优化）');
 
   spectrum
     .command('list')
-    .description('List all Spectrum applications')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
-    .option('-j, --json', 'Output as JSON')
+    .description('列出所有 Spectrum 应用 - 显示所有已配置的 TCP/UDP 应用程序及其状态信息')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID），用于指定特定区域。如未指定则使用配置文件中默认的区域')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -44,10 +58,10 @@ function spectrumCommands(program) {
 
   spectrum
     .command('get')
-    .description('Get a Spectrum application details')
-    .requiredOption('-i, --id <id>', 'Application ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
-    .option('-j, --json', 'Output as JSON')
+    .description('获取 Spectrum 应用详情 - 查看特定 TCP/UDP 应用程序的详细配置信息')
+    .requiredOption('-i, --id <id>', '应用程序 ID（Application ID），指定要查询的 Spectrum 应用')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID），用于指定特定区域。如未指定则使用配置文件中默认的区域')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -85,15 +99,15 @@ function spectrumCommands(program) {
 
   spectrum
     .command('create')
-    .description('Create a new Spectrum application')
-    .requiredOption('--protocol <protocol>', 'Protocol (e.g., tcp/22, udp/53)')
-    .requiredOption('--origin <origin>', 'Origin address (e.g., 192.168.1.1:22)')
-    .option('--dns <dns>', 'DNS name (e.g., ssh.example.com)')
-    .option('--proxy-protocol', 'Enable proxy protocol', false)
-    .option('--ip-firewall', 'Enable IP firewall', true)
-    .option('--tls <tls>', 'TLS mode (off, flexible, full, strict)', 'off')
-    .option('--edge-ips <ips>', 'Edge IPs (all, connectivity_dynamic, ipv4, ipv6)', 'all')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description('创建新的 Spectrum 应用 - 为 TCP/UDP 服务配置 Cloudflare Spectrum 防护，将流量代理通过 Cloudflare 网络')
+    .requiredOption('--protocol <protocol>', '协议和端口（例如：tcp/22, udp/53），指定要代理的协议类型和端口号')
+    .requiredOption('--origin <origin>', '源站地址（例如：192.168.1.1:22），指定后端服务器的 IP 地址和端口')
+    .option('--dns <dns>', 'DNS 名称（例如：ssh.example.com），为 Spectrum 应用配置友好的 DNS 名称，便于访问')
+    .option('--proxy-protocol', '启用代理协议（Proxy Protocol），用于向后端服务器传递客户端原始 IP 信息', false)
+    .option('--ip-firewall', '启用 IP 防火墙，提供基于 IP 地址的访问控制功能', true)
+    .option('--tls <tls>', 'TLS 加密模式（控制流量加密级别）', 'off')
+    .option('--edge-ips <ips>', '边缘 IP 配置（指定用于接收流量的 Cloudflare IP 类型）', 'all')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID），用于指定特定区域。如未指定则使用配置文件中默认的区域')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -116,18 +130,18 @@ function spectrumCommands(program) {
 
   spectrum
     .command('update')
-    .description('Update a Spectrum application')
-    .requiredOption('-i, --id <id>', 'Application ID')
-    .option('--protocol <protocol>', 'Protocol')
-    .option('--origin <origin>', 'Origin address')
-    .option('--dns <dns>', 'DNS name')
-    .option('--proxy-protocol', 'Enable proxy protocol', true)
-    .option('--no-proxy-protocol', 'Disable proxy protocol', false)
-    .option('--ip-firewall', 'Enable IP firewall', true)
-    .option('--no-ip-firewall', 'Disable IP firewall', false)
-    .option('--tls <tls>', 'TLS mode')
-    .option('--edge-ips <ips>', 'Edge IPs')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description('更新 Spectrum 应用 - 修改现有 TCP/UDP 应用程序的配置设置')
+    .requiredOption('-i, --id <id>', '应用程序 ID（Application ID），指定要更新的 Spectrum 应用')
+    .option('--protocol <protocol>', '协议和端口（例如：tcp/22, udp/53），修改要代理的协议类型和端口号')
+    .option('--origin <origin>', '源站地址（例如：192.168.1.1:22），修改后端服务器的 IP 地址和端口')
+    .option('--dns <dns>', 'DNS 名称（例如：ssh.example.com），修改 Spectrum 应用的 DNS 名称')
+    .option('--proxy-protocol', '启用代理协议（Proxy Protocol），向后端服务器传递客户端原始 IP 信息', true)
+    .option('--no-proxy-protocol', '禁用代理协议（Proxy Protocol）', false)
+    .option('--ip-firewall', '启用 IP 防火墙，提供基于 IP 地址的访问控制功能', true)
+    .option('--no-ip-firewall', '禁用 IP 防火墙', false)
+    .option('--tls <tls>', 'TLS 加密模式（控制流量加密级别）')
+    .option('--edge-ips <ips>', '边缘 IP 配置（指定用于接收流量的 Cloudflare IP 类型）')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID），用于指定特定区域。如未指定则使用配置文件中默认的区域')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -154,9 +168,9 @@ function spectrumCommands(program) {
 
   spectrum
     .command('delete')
-    .description('Delete a Spectrum application')
-    .requiredOption('-i, --id <id>', 'Application ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description('删除 Spectrum 应用 - 移除 TCP/UDP 应用程序的 Spectrum 防护，删除后流量将直接到达源站')
+    .requiredOption('-i, --id <id>', '应用程序 ID（Application ID），指定要删除的 Spectrum 应用')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID），用于指定特定区域。如未指定则使用配置文件中默认的区域')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);

@@ -2,15 +2,17 @@ const CloudflareClient = require('../utils/cf-client');
 const { formatSuccess, formatError, formatTable, formatJson, formatInfo } = require('../utils/formatter');
 
 function streamCommands(program) {
-  const stream = program.command('stream').description('Manage Cloudflare Stream (Enterprise - Video)');
+  const stream = program.command('stream').description(
+    'Manage Cloudflare Stream (Enterprise - Video). 管理 Cloudflare Stream 视频服务（企业级），包括视频的列出、查看、删除和字幕管理。'
+  );
 
   stream
     .command('list')
-    .description('List all videos')
-    .option('--limit <limit>', 'Number of videos to return', '100')
-    .option('--before <timestamp>', 'Videos before this timestamp')
-    .option('--after <timestamp>', 'Videos after this timestamp')
-    .option('-j, --json', 'Output as JSON')
+    .description('List all videos. 列出所有视频，支持按时间范围过滤和限制返回数量。')
+    .option('--limit <limit>', 'Number of videos to return. 返回的视频数量。', '100')
+    .option('--before <timestamp>', 'Videos before this timestamp. 仅返回此时间戳之前创建的视频。')
+    .option('--after <timestamp>', 'Videos after this timestamp. 仅返回此时间戳之后创建的视频。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -50,9 +52,9 @@ function streamCommands(program) {
 
   stream
     .command('get')
-    .description('Get a video details')
-    .requiredOption('-i, --id <id>', 'Video UID')
-    .option('-j, --json', 'Output as JSON')
+    .description('Get a video details. 获取视频的详细信息，包括 UID、名称、状态、时长、大小、播放地址等。')
+    .requiredOption('-i, --id <id>', 'Video UID. 视频的唯一标识符 UID。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -91,8 +93,8 @@ function streamCommands(program) {
 
   stream
     .command('delete')
-    .description('Delete a video')
-    .requiredOption('-i, --id <id>', 'Video UID')
+    .description('Delete a video. 删除视频，此操作不可逆。')
+    .requiredOption('-i, --id <id>', 'Video UID. 要删除的视频 UID。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -104,13 +106,15 @@ function streamCommands(program) {
     });
 
   // Captions
-  const captions = stream.command('captions').description('Manage Video Captions');
+  const captions = stream.command('captions').description(
+    'Manage Video Captions. 管理视频字幕，支持列出、更新和删除操作。'
+  );
 
   captions
     .command('list')
-    .description('List captions for a video')
-    .requiredOption('-i, --id <id>', 'Video UID')
-    .option('-j, --json', 'Output as JSON')
+    .description('List captions for a video. 列出视频的所有字幕，显示语言、标签和状态。')
+    .requiredOption('-i, --id <id>', 'Video UID. 视频的唯一标识符 UID。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -138,10 +142,10 @@ function streamCommands(program) {
 
   captions
     .command('update')
-    .description('Update a caption')
-    .requiredOption('-i, --id <id>', 'Video UID')
-    .requiredOption('-l, --language <language>', 'Language code')
-    .option('--label <label>', 'Caption label')
+    .description('Update a caption. 更新视频字幕的标签信息。')
+    .requiredOption('-i, --id <id>', 'Video UID. 视频的唯一标识符 UID。')
+    .requiredOption('-l, --language <language>', 'Language code. 字幕语言代码。')
+    .option('--label <label>', 'Caption label. 字幕标签。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -157,9 +161,9 @@ function streamCommands(program) {
 
   captions
     .command('delete')
-    .description('Delete a caption')
-    .requiredOption('-i, --id <id>', 'Video UID')
-    .requiredOption('-l, --language <language>', 'Language code')
+    .description('Delete a caption. 删除视频字幕，此操作不可逆。')
+    .requiredOption('-i, --id <id>', 'Video UID. 视频的唯一标识符 UID。')
+    .requiredOption('-l, --language <language>', 'Language code. 要删除的字幕语言代码。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);

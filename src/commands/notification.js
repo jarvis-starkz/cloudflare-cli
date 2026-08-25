@@ -1,16 +1,30 @@
 const CloudflareClient = require('../utils/cf-client');
 const { formatSuccess, formatError, formatTable, formatJson, formatInfo } = require('../utils/formatter');
 
+/**
+ * 通知命令
+ *
+ * 功能说明：管理 Cloudflare 通知服务，包括告警通知、通知策略、
+ * Webhook 集成和 PagerDuty 集成。提供灵活的通知配置，
+ * 确保在发生重要事件时及时收到提醒。
+ *
+ * 使用场景：
+ * - 配置告警通知以监控服务状态
+ * - 设置通知策略定义通知规则
+ * - 集成 Webhook 实现自动化工作流
+ * - 连接 PagerDuty 实现事件管理
+ * - 查看通知历史记录
+ */
 function notificationCommands(program) {
-  const notification = program.command('notification').description('Manage Cloudflare Notifications (Enterprise)');
+  const notification = program.command('notification').description('管理 Cloudflare Notifications（企业级告警通知，支持邮件、Webhook 和 PagerDuty 集成）');
 
   // Alerts
-  const alerts = notification.command('alerts').description('Manage Alert Notifications');
+  const alerts = notification.command('alerts').description('管理告警通知 - 配置和查看告警通知设置');
 
   alerts
     .command('list')
-    .description('List all alert notifications')
-    .option('-j, --json', 'Output as JSON')
+    .description('列出所有告警通知 - 显示账户下配置的所有告警通知及其状态信息')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -44,9 +58,9 @@ function notificationCommands(program) {
 
   alerts
     .command('get')
-    .description('Get alert notification details')
-    .requiredOption('-i, --id <id>', 'Alert ID')
-    .option('-j, --json', 'Output as JSON')
+    .description('获取告警通知详情 - 查看特定告警通知的详细配置信息')
+    .requiredOption('-i, --id <id>', '告警通知 ID（Alert ID），指定要查询的告警')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -80,8 +94,8 @@ function notificationCommands(program) {
 
   alerts
     .command('history')
-    .description('List notification history')
-    .option('-j, --json', 'Output as JSON')
+    .description('列出通知历史 - 查看已发送的通知历史记录，包括发送状态和时间')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -111,12 +125,12 @@ function notificationCommands(program) {
     });
 
   // Policies (Enterprise)
-  const policies = notification.command('policies').description('Manage Notification Policies (Enterprise)');
+  const policies = notification.command('policies').description('管理通知策略（企业级）- 配置通知规则和条件');
 
   policies
     .command('list')
-    .description('List all notification policies')
-    .option('-j, --json', 'Output as JSON')
+    .description('列出所有通知策略 - 显示账户下配置的所有通知策略及其状态信息')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -151,9 +165,9 @@ function notificationCommands(program) {
 
   policies
     .command('get')
-    .description('Get notification policy details')
-    .requiredOption('-i, --id <id>', 'Policy ID')
-    .option('-j, --json', 'Output as JSON')
+    .description('获取通知策略详情 - 查看特定通知策略的详细配置信息')
+    .requiredOption('-i, --id <id>', '通知策略 ID（Policy ID），指定要查询的策略')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -187,13 +201,13 @@ function notificationCommands(program) {
 
   policies
     .command('create')
-    .description('Create a notification policy')
-    .requiredOption('-n, --name <name>', 'Policy name')
-    .requiredOption('--alert-type <type>', 'Alert type (e.g., load_balancing_health_alert, g6_pool_toggle_alert)')
-    .option('--description <description>', 'Policy description')
-    .option('--enabled', 'Enable the policy', true)
-    .option('--no-enabled', 'Disable the policy')
-    .option('-j, --json', 'Output as JSON')
+    .description('创建通知策略 - 配置新的通知策略，定义通知条件和接收方式')
+    .requiredOption('-n, --name <name>', '策略名称，用于标识和管理通知策略')
+    .requiredOption('--alert-type <type>', '告警类型（例如：load_balancing_health_alert, g6_pool_toggle_alert），指定触发通知的事件类型')
+    .option('--description <description>', '策略描述，用于说明策略的用途')
+    .option('--enabled', '启用策略，使其开始监控和发送通知', true)
+    .option('--no-enabled', '禁用策略')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -218,13 +232,13 @@ function notificationCommands(program) {
 
   policies
     .command('update')
-    .description('Update a notification policy')
-    .requiredOption('-i, --id <id>', 'Policy ID')
-    .option('-n, --name <name>', 'Policy name')
-    .option('--description <description>', 'Policy description')
-    .option('--enabled', 'Enable the policy')
-    .option('--no-enabled', 'Disable the policy')
-    .option('-j, --json', 'Output as JSON')
+    .description('更新通知策略 - 修改现有通知策略的配置设置')
+    .requiredOption('-i, --id <id>', '通知策略 ID（Policy ID），指定要更新的策略')
+    .option('-n, --name <name>', '策略名称，修改策略的标识名称')
+    .option('--description <description>', '策略描述，修改描述信息')
+    .option('--enabled', '启用策略')
+    .option('--no-enabled', '禁用策略')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -252,8 +266,8 @@ function notificationCommands(program) {
 
   policies
     .command('delete')
-    .description('Delete a notification policy')
-    .requiredOption('-i, --id <id>', 'Policy ID')
+    .description('删除通知策略 - 移除通知策略，删除后将停止根据该策略发送通知')
+    .requiredOption('-i, --id <id>', '通知策略 ID（Policy ID），指定要删除的策略')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -265,12 +279,12 @@ function notificationCommands(program) {
     });
 
   // Webhooks (Enterprise)
-  const webhooks = notification.command('webhooks').description('Manage Notification Webhooks (Enterprise)');
+  const webhooks = notification.command('webhooks').description('管理通知 Webhook（企业级）- 配置 Webhook 接收通知事件');
 
   webhooks
     .command('list')
-    .description('List all notification webhooks')
-    .option('-j, --json', 'Output as JSON')
+    .description('列出所有通知 Webhook - 显示账户下配置的所有 Webhook 及其状态信息')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -302,9 +316,9 @@ function notificationCommands(program) {
 
   webhooks
     .command('get')
-    .description('Get notification webhook details')
-    .requiredOption('-i, --id <id>', 'Webhook ID')
-    .option('-j, --json', 'Output as JSON')
+    .description('获取通知 Webhook 详情 - 查看特定 Webhook 的详细配置信息')
+    .requiredOption('-i, --id <id>', 'Webhook ID，指定要查询的 Webhook')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -335,11 +349,11 @@ function notificationCommands(program) {
 
   webhooks
     .command('create')
-    .description('Create a notification webhook')
-    .requiredOption('-n, --name <name>', 'Webhook name')
-    .requiredOption('-u, --url <url>', 'Webhook URL')
-    .option('--secret <secret>', 'Webhook secret for HMAC verification')
-    .option('-j, --json', 'Output as JSON')
+    .description('创建通知 Webhook - 配置新的 Webhook 端点，用于接收通知事件')
+    .requiredOption('-n, --name <name>', 'Webhook 名称，用于标识和管理 Webhook')
+    .requiredOption('-u, --url <url>', 'Webhook URL，指定接收通知的端点地址')
+    .option('--secret <secret>', 'Webhook 密钥，用于 HMAC 签名验证，确保通知来源可信')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -363,12 +377,12 @@ function notificationCommands(program) {
 
   webhooks
     .command('update')
-    .description('Update a notification webhook')
-    .requiredOption('-i, --id <id>', 'Webhook ID')
-    .option('-n, --name <name>', 'Webhook name')
-    .option('-u, --url <url>', 'Webhook URL')
-    .option('--secret <secret>', 'Webhook secret')
-    .option('-j, --json', 'Output as JSON')
+    .description('更新通知 Webhook - 修改现有 Webhook 的配置设置')
+    .requiredOption('-i, --id <id>', 'Webhook ID，指定要更新的 Webhook')
+    .option('-n, --name <name>', 'Webhook 名称，修改 Webhook 的标识名称')
+    .option('-u, --url <url>', 'Webhook URL，修改接收通知的端点地址')
+    .option('--secret <secret>', 'Webhook 密钥，修改 HMAC 签名验证密钥')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -396,8 +410,8 @@ function notificationCommands(program) {
 
   webhooks
     .command('delete')
-    .description('Delete a notification webhook')
-    .requiredOption('-i, --id <id>', 'Webhook ID')
+    .description('删除通知 Webhook - 移除 Webhook 配置，删除后将停止向该端点发送通知')
+    .requiredOption('-i, --id <id>', 'Webhook ID，指定要删除的 Webhook')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -409,12 +423,12 @@ function notificationCommands(program) {
     });
 
   // PagerDuty Integration (Enterprise)
-  const pagerduty = notification.command('pagerduty').description('Manage PagerDuty Integration (Enterprise)');
+  const pagerduty = notification.command('pagerduty').description('管理 PagerDuty 集成（企业级）- 连接 PagerDuty 实现事件管理');
 
   pagerduty
     .command('get')
-    .description('Get PagerDuty integration details')
-    .option('-j, --json', 'Output as JSON')
+    .description('获取 PagerDuty 集成详情 - 查看当前 PagerDuty 集成的配置信息')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -441,9 +455,9 @@ function notificationCommands(program) {
 
   pagerduty
     .command('connect')
-    .description('Connect PagerDuty integration')
-    .requiredOption('--integration-url <url>', 'PagerDuty integration URL')
-    .option('-n, --name <name>', 'Integration name')
+    .description('连接 PagerDuty 集成 - 配置与 PagerDuty 的连接，将 Cloudflare 通知发送到 PagerDuty')
+    .requiredOption('--integration-url <url>', 'PagerDuty 集成 URL，指定 PagerDuty 的集成端点地址')
+    .option('-n, --name <name>', '集成名称，用于标识 PagerDuty 集成')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -461,7 +475,7 @@ function notificationCommands(program) {
 
   pagerduty
     .command('disconnect')
-    .description('Disconnect PagerDuty integration')
+    .description('断开 PagerDuty 集成 - 移除与 PagerDuty 的连接，停止发送通知到 PagerDuty')
     .action(async () => {
       try {
         const client = new CloudflareClient(program.opts().config);

@@ -1,16 +1,30 @@
 const CloudflareClient = require('../utils/cf-client');
 const { formatSuccess, formatError, formatTable, formatJson, formatInfo } = require('../utils/formatter');
 
+/**
+ * Pages 命令
+ *
+ * 功能说明：管理 Cloudflare Pages，为 JAMstack 应用提供静态站点托管和持续部署。
+ * Pages 支持直接从 Git 仓库自动构建和部署，提供全球 CDN 分发、
+ * 自动 HTTPS、预览部署和自定义域名等功能。
+ *
+ * 使用场景：
+ * - 部署静态网站和 JAMstack 应用
+ * - 配置自动构建和持续部署
+ * - 管理预览部署环境
+ * - 添加自定义域名
+ * - 查看部署历史和状态
+ */
 function pagesCommands(program) {
-  const pages = program.command('pages').description('Manage Cloudflare Pages');
+  const pages = program.command('pages').description('管理 Cloudflare Pages（JAMstack 静态站点托管，支持自动构建、部署和全球 CDN 分发）');
 
   // Pages Projects
-  const projects = pages.command('projects').description('Manage Pages Projects');
+  const projects = pages.command('projects').description('管理 Pages 项目 - 创建、配置和删除静态站点项目');
 
   projects
     .command('list')
-    .description('List all Pages projects')
-    .option('-j, --json', 'Output as JSON')
+    .description('列出所有 Pages 项目 - 显示账户下配置的所有 Pages 项目及其状态信息')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -42,9 +56,9 @@ function pagesCommands(program) {
 
   projects
     .command('get')
-    .description('Get a Pages project details')
-    .requiredOption('-n, --name <name>', 'Project name')
-    .option('-j, --json', 'Output as JSON')
+    .description('获取 Pages 项目详情 - 查看特定项目的详细配置信息，包括源代码设置和部署配置')
+    .requiredOption('-n, --name <name>', '项目名称（Project Name），指定要查询的 Pages 项目')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -78,10 +92,10 @@ function pagesCommands(program) {
 
   projects
     .command('create')
-    .description('Create a new Pages project')
-    .requiredOption('-n, --name <name>', 'Project name')
-    .option('--branch <branch>', 'Production branch', 'main')
-    .option('--source-type <type>', 'Source type (github, gitlab)', 'github')
+    .description('创建新的 Pages 项目 - 配置新的静态站点项目，指定源代码仓库和生产分支')
+    .requiredOption('-n, --name <name>', '项目名称（Project Name），用于标识和管理项目，也将作为子域名前缀')
+    .option('--branch <branch>', '生产分支名称，指定用于生产部署的 Git 分支', 'main')
+    .option('--source-type <type>', '源代码仓库类型（github, gitlab），指定托管代码的平台', 'github')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -103,8 +117,8 @@ function pagesCommands(program) {
 
   projects
     .command('delete')
-    .description('Delete a Pages project')
-    .requiredOption('-n, --name <name>', 'Project name')
+    .description('删除 Pages 项目 - 移除项目及其所有部署，删除后项目将无法访问')
+    .requiredOption('-n, --name <name>', '项目名称（Project Name），指定要删除的 Pages 项目')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -116,13 +130,13 @@ function pagesCommands(program) {
     });
 
   // Pages Deployments
-  const deployments = pages.command('deployments').description('Manage Pages Deployments');
+  const deployments = pages.command('deployments').description('管理 Pages 部署 - 查看和管理项目的部署历史');
 
   deployments
     .command('list')
-    .description('List deployments for a project')
-    .requiredOption('-n, --name <name>', 'Project name')
-    .option('-j, --json', 'Output as JSON')
+    .description('列出项目部署 - 显示特定项目的所有部署记录及其状态信息')
+    .requiredOption('-n, --name <name>', '项目名称（Project Name），指定要查询的项目')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -154,8 +168,8 @@ function pagesCommands(program) {
 
   deployments
     .command('create')
-    .description('Create a new deployment')
-    .requiredOption('-n, --name <name>', 'Project name')
+    .description('创建新的部署 - 为项目触发新的部署，将最新代码部署到生产环境')
+    .requiredOption('-n, --name <name>', '项目名称（Project Name），指定要部署的项目')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -168,9 +182,9 @@ function pagesCommands(program) {
 
   deployments
     .command('delete')
-    .description('Delete a deployment')
-    .requiredOption('-n, --name <name>', 'Project name')
-    .requiredOption('-d, --deployment-id <id>', 'Deployment ID')
+    .description('删除部署 - 移除特定的部署记录，删除后该部署将无法访问')
+    .requiredOption('-n, --name <name>', '项目名称（Project Name），指定要操作的项目')
+    .requiredOption('-d, --deployment-id <id>', '部署 ID（Deployment ID），指定要删除的部署')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -182,13 +196,13 @@ function pagesCommands(program) {
     });
 
   // Pages Domains
-  const domains = pages.command('domains').description('Manage Pages Custom Domains');
+  const domains = pages.command('domains').description('管理 Pages 自定义域名 - 为项目配置和管理自定义域名');
 
   domains
     .command('list')
-    .description('List custom domains for a project')
-    .requiredOption('-n, --name <name>', 'Project name')
-    .option('-j, --json', 'Output as JSON')
+    .description('列出项目自定义域名 - 显示特定项目配置的所有自定义域名')
+    .requiredOption('-n, --name <name>', '项目名称（Project Name），指定要查询的项目')
+    .option('-j, --json', '以 JSON 格式输出结果，便于脚本处理和自动化工作流')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -217,9 +231,9 @@ function pagesCommands(program) {
 
   domains
     .command('add')
-    .description('Add a custom domain to a project')
-    .requiredOption('-n, --name <name>', 'Project name')
-    .requiredOption('--domain <domain>', 'Custom domain (e.g., example.com)')
+    .description('添加自定义域名 - 为项目配置自定义域名，使站点可通过自有域名访问')
+    .requiredOption('-n, --name <name>', '项目名称（Project Name），指定要配置的项目')
+    .requiredOption('--domain <domain>', '自定义域名（例如：example.com），指定要添加的域名')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -232,9 +246,9 @@ function pagesCommands(program) {
 
   domains
     .command('delete')
-    .description('Delete a custom domain from a project')
-    .requiredOption('-n, --name <name>', 'Project name')
-    .requiredOption('--domain <domain>', 'Custom domain')
+    .description('删除自定义域名 - 移除项目的自定义域名配置，删除后该域名将无法访问站点')
+    .requiredOption('-n, --name <name>', '项目名称（Project Name），指定要操作的项目')
+    .requiredOption('--domain <domain>', '自定义域名，指定要删除的域名')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);

@@ -3,12 +3,14 @@ const { formatSuccess, formatError, formatTable, formatJson, formatInfo } = requ
 const fs = require('fs');
 
 function workerCommands(program) {
-  const workers = program.command('workers').description('Manage Cloudflare Workers');
+  const workers = program.command('workers').description(
+    'Manage Cloudflare Workers. 管理 Cloudflare Workers，包括脚本上传、删除和路由配置。'
+  );
 
   workers
     .command('list')
-    .description('List all Workers')
-    .option('-j, --json', 'Output as JSON')
+    .description('List all Workers. 列出账户下所有 Workers，显示 ID、创建时间和修改时间。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -36,9 +38,9 @@ function workerCommands(program) {
 
   workers
     .command('upload')
-    .description('Upload a Worker script')
-    .requiredOption('-n, --name <name>', 'Worker name')
-    .requiredOption('-f, --file <path>', 'Path to Worker script file')
+    .description('Upload a Worker script. 上传 Worker 脚本到 Cloudflare，自动设置兼容性日期为当天。')
+    .requiredOption('-n, --name <name>', 'Worker name. Worker 名称，用于标识该 Worker。')
+    .requiredOption('-f, --file <path>', 'Path to Worker script file. Worker 脚本文件路径。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -62,8 +64,8 @@ function workerCommands(program) {
 
   workers
     .command('delete')
-    .description('Delete a Worker')
-    .requiredOption('-n, --name <name>', 'Worker name')
+    .description('Delete a Worker. 删除 Cloudflare Worker，此操作不可逆。')
+    .requiredOption('-n, --name <name>', 'Worker name. 要删除的 Worker 名称。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -74,12 +76,14 @@ function workerCommands(program) {
       }
     });
 
-  const routes = workers.command('routes').description('Manage Worker Routes');
+  const routes = workers.command('routes').description(
+    'Manage Worker Routes. 管理 Worker 路由，用于将 URL 模式映射到指定的 Worker 脚本。'
+  );
 
   routes
     .command('list')
-    .description('List all Worker routes')
-    .option('-j, --json', 'Output as JSON')
+    .description('List all Worker routes. 列出所有 Worker 路由，显示路由 ID、URL 模式和关联的脚本名称。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -107,9 +111,9 @@ function workerCommands(program) {
 
   routes
     .command('add')
-    .description('Add a Worker route')
-    .requiredOption('-p, --pattern <pattern>', 'Route pattern (e.g., "example.com/api/*")')
-    .requiredOption('-s, --script <script>', 'Worker script name')
+    .description('Add a Worker route. 添加 Worker 路由，将 URL 模式映射到指定的 Worker 脚本。')
+    .requiredOption('-p, --pattern <pattern>', 'Route pattern (e.g., "example.com/api/*"). 路由模式，支持通配符，如 "example.com/api/*"。')
+    .requiredOption('-s, --script <script>', 'Worker script name. 要关联的 Worker 脚本名称。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -122,8 +126,8 @@ function workerCommands(program) {
 
   routes
     .command('delete')
-    .description('Delete a Worker route')
-    .requiredOption('-i, --id <id>', 'Route ID')
+    .description('Delete a Worker route. 删除 Worker 路由，此操作不可逆。')
+    .requiredOption('-i, --id <id>', 'Route ID. 要删除的路由 ID。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);

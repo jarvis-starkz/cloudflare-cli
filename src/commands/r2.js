@@ -124,18 +124,22 @@ function makeS3Client(s3cfg) {
 /* -------------------------------------------------------------------------- */
 
 function r2Commands(program) {
-  const r2 = program.command('r2').description('Manage Cloudflare R2 Storage');
+  const r2 = program.command('r2').description(
+    'Manage Cloudflare R2 Storage. 管理 Cloudflare R2 对象存储，包括桶的增删查改和对象的读写操作。'
+  );
 
   // ------------------------------- Buckets ---------------------------------
-  const buckets = r2.command('buckets').description('Manage R2 Buckets (Cloudflare REST API)');
+  const buckets = r2.command('buckets').description(
+    'Manage R2 Buckets (Cloudflare REST API). 管理 R2 存储桶，使用 Cloudflare REST API 进行创建、列出、查看和删除操作。'
+  );
 
   buckets
     .command('list')
-    .description('List all R2 buckets in the account')
-    .option('--page <N>', 'Page number (1-based) when --all is not used', '1')
-    .option('--per-page <N>', 'Page size (default 50)', '50')
-    .option('--all', 'Fetch ALL buckets by auto-paging')
-    .option('-j, --json', 'Output as JSON')
+    .description('List all R2 buckets in the account. 列出账户下所有 R2 存储桶，支持分页和自动翻页获取全部数据。')
+    .option('--page <N>', 'Page number (1-based) when --all is not used. 页码（从 1 开始），仅在未使用 --all 时生效。', '1')
+    .option('--per-page <N>', 'Page size (default 50). 每页返回的存储桶数量。', '50')
+    .option('--all', 'Fetch ALL buckets by auto-paging. 自动翻页获取所有存储桶。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -177,9 +181,11 @@ function r2Commands(program) {
 
   buckets
     .command('create')
-    .description('Create a new R2 bucket [WRITE — operator approval required]')
-    .requiredOption('-n, --name <name>', 'Bucket name (globally unique per account)')
-    .option('-l, --location <location>', 'Location hint (WNAM, ENAM, WEUR, EEUR, APAC, OCE)', 'WNAM')
+    .description(
+      'Create a new R2 bucket [WRITE — operator approval required]. 创建新的 R2 存储桶，需要操作员审批。桶名称在账户内必须全局唯一。'
+    )
+    .requiredOption('-n, --name <name>', 'Bucket name (globally unique per account). 存储桶名称，在账户内必须全局唯一。')
+    .option('-l, --location <location>', 'Location hint (WNAM, ENAM, WEUR, EEUR, APAC, OCE). 存储位置提示，可选值：WNAM, ENAM, WEUR, EEUR, APAC, OCE。', 'WNAM')
     .action(async (options) => {
       try {
         if (!guard(`r2 buckets create (name="${options.name}")`, program)) return;
@@ -191,9 +197,9 @@ function r2Commands(program) {
 
   buckets
     .command('get')
-    .description('Get bucket details')
-    .requiredOption('-n, --name <name>', 'Bucket name')
-    .option('-j, --json', 'Output as JSON')
+    .description('Get bucket details. 获取 R2 存储桶的详细信息，包括名称、位置、创建时间和存储类别。')
+    .requiredOption('-n, --name <name>', 'Bucket name. 存储桶名称。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -214,8 +220,10 @@ function r2Commands(program) {
 
   buckets
     .command('delete')
-    .description('Delete an R2 bucket [DESTRUCTIVE — operator approval required]')
-    .requiredOption('-n, --name <name>', 'Bucket name')
+    .description(
+      'Delete an R2 bucket [DESTRUCTIVE — operator approval required]. 删除 R2 存储桶及其所有对象，此操作不可逆，需要操作员审批。'
+    )
+    .requiredOption('-n, --name <name>', 'Bucket name. 要删除的存储桶名称。')
     .action(async (options) => {
       try {
         if (!guard(`r2 buckets delete (name="${options.name}")`, program)) return;
@@ -227,23 +235,23 @@ function r2Commands(program) {
 
   // ------------------------------- Objects ---------------------------------
   const objects = r2.command('objects').description(
-    'Manage objects inside an R2 bucket (S3-compatible API — requires R2 access keys)',
+    'Manage objects inside an R2 bucket (S3-compatible API — requires R2 access keys). 管理 R2 存储桶中的对象，使用 S3 兼容 API，需要 R2 访问密钥。',
   );
   // Shared credential options mounted on every object subcommand via loop.
   const mountR2Auth = (cmd) => cmd
-    .option('--r2-access-key-id <id>', 'R2 access key ID (or env CLOUDFLARE_R2_ACCESS_KEY_ID)')
-    .option('--r2-secret-access-key <secret>', 'R2 secret access key (or env CLOUDFLARE_R2_SECRET_ACCESS_KEY)')
-    .option('--r2-endpoint <url>', 'Override S3 endpoint (default: https://<accountId>.r2.cloudflarestorage.com)')
-    .option('--account-id <id>', 'Cloudflare Account ID (for endpoint derivation)');
+    .option('--r2-access-key-id <id>', 'R2 access key ID (or env CLOUDFLARE_R2_ACCESS_KEY_ID). R2 访问密钥 ID，也可通过环境变量 CLOUDFLARE_R2_ACCESS_KEY_ID 设置。')
+    .option('--r2-secret-access-key <secret>', 'R2 secret access key (or env CLOUDFLARE_R2_SECRET_ACCESS_KEY). R2 秘密访问密钥，也可通过环境变量 CLOUDFLARE_R2_SECRET_ACCESS_KEY 设置。')
+    .option('--r2-endpoint <url>', 'Override S3 endpoint (default: https://<accountId>.r2.cloudflarestorage.com). 覆盖 S3 端点地址，默认为 https://<accountId>.r2.cloudflarestorage.com。')
+    .option('--account-id <id>', 'Cloudflare Account ID (for endpoint derivation). Cloudflare 账户 ID，用于推导端点地址。');
 
   mountR2Auth(objects.command('list')
-    .description('List objects in a bucket (S3 ListObjectsV2)')
-    .requiredOption('-b, --bucket <bucket>', 'Bucket name')
-    .option('--prefix <prefix>', 'Key prefix')
-    .option('--delimiter <delim>', 'Group keys by this delimiter')
-    .option('--max-keys <N>', 'Max keys per page (default 1000)', '1000')
-    .option('--all', 'Auto-follow ContinuationTokens until listing is complete')
-    .option('-j, --json', 'Output as JSON'))
+    .description('List objects in a bucket (S3 ListObjectsV2). 列出存储桶中的对象，支持前缀过滤和分页，使用 S3 ListObjectsV2 API。')
+    .requiredOption('-b, --bucket <bucket>', 'Bucket name. 存储桶名称。')
+    .option('--prefix <prefix>', 'Key prefix. 键前缀，仅返回以该前缀开头的对象。')
+    .option('--delimiter <delim>', 'Group keys by this delimiter. 分隔符，用于对键进行分组。')
+    .option('--max-keys <N>', 'Max keys per page (default 1000). 每页返回的最大键数量。', '1000')
+    .option('--all', 'Auto-follow ContinuationTokens until listing is complete. 自动跟随 ContinuationToken 直到列出所有对象。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。'))
     .action(async (options) => {
       try {
         const s3cfg = resolveS3Config(program.opts(), options);
@@ -302,10 +310,10 @@ function r2Commands(program) {
     });
 
   mountR2Auth(objects.command('get')
-    .description('Download an object from R2 to a local file (S3 GetObject)')
-    .requiredOption('-b, --bucket <bucket>', 'Bucket name')
-    .requiredOption('-k, --key <key>', 'Object key')
-    .requiredOption('-o, --out <path>', 'Local destination file path'))
+    .description('Download an object from R2 to a local file (S3 GetObject). 从 R2 下载对象到本地文件，使用 S3 GetObject API。')
+    .requiredOption('-b, --bucket <bucket>', 'Bucket name. 存储桶名称。')
+    .requiredOption('-k, --key <key>', 'Object key. 要下载的对象键。')
+    .requiredOption('-o, --out <path>', 'Local destination file path. 本地目标文件路径。'))
     .action(async (options) => {
       try {
         const s3cfg = resolveS3Config(program.opts(), options);
@@ -343,13 +351,15 @@ function r2Commands(program) {
     });
 
   mountR2Auth(objects.command('put')
-    .description('Upload a local file to R2 (S3 PutObject) [WRITE — operator approval required]')
-    .requiredOption('-b, --bucket <bucket>', 'Bucket name')
-    .requiredOption('-k, --key <key>', 'Object key')
-    .requiredOption('-f, --file <path>', 'Local file to upload')
-    .option('--content-type <type>', 'Content-Type header (default: guessed from ext or application/octet-stream)')
-    .option('--cache-control <value>', 'Cache-Control header')
-    .option('--content-disposition <value>', 'Content-Disposition header'))
+    .description(
+      'Upload a local file to R2 (S3 PutObject) [WRITE — operator approval required]. 上传本地文件到 R2，支持设置 Content-Type、Cache-Control 等头部，需要操作员审批。'
+    )
+    .requiredOption('-b, --bucket <bucket>', 'Bucket name. 存储桶名称。')
+    .requiredOption('-k, --key <key>', 'Object key. 对象键。')
+    .requiredOption('-f, --file <path>', 'Local file to upload. 要上传的本地文件路径。')
+    .option('--content-type <type>', 'Content-Type header (default: guessed from ext or application/octet-stream). Content-Type 头部，默认根据文件扩展名猜测或 application/octet-stream。')
+    .option('--cache-control <value>', 'Cache-Control header. Cache-Control 头部。')
+    .option('--content-disposition <value>', 'Content-Disposition header. Content-Disposition 头部。'))
     .action(async (options) => {
       try {
         if (!guard(`r2 objects put (bucket=${options.bucket}, key=${options.key})`, program)) return;
@@ -379,9 +389,11 @@ function r2Commands(program) {
     });
 
   mountR2Auth(objects.command('delete')
-    .description('Delete a single object [DESTRUCTIVE — operator approval required]')
-    .requiredOption('-b, --bucket <bucket>', 'Bucket name')
-    .requiredOption('-k, --key <key>', 'Object key'))
+    .description(
+      'Delete a single object [DESTRUCTIVE — operator approval required]. 删除 R2 中的单个对象，此操作不可逆，需要操作员审批。'
+    )
+    .requiredOption('-b, --bucket <bucket>', 'Bucket name. 存储桶名称。')
+    .requiredOption('-k, --key <key>', 'Object key. 要删除的对象键。'))
     .action(async (options) => {
       try {
         if (!guard(`r2 objects delete (bucket=${options.bucket}, key=${options.key})`, program)) return;
@@ -397,14 +409,14 @@ function r2Commands(program) {
 
   // ------------------------------- Presign ---------------------------------
   const presign = r2.command('presign').description(
-    'Create presigned URLs for private R2 objects (requires R2 access keys)',
+    'Create presigned URLs for private R2 objects (requires R2 access keys). 为私有 R2 对象生成预签名 URL，允许临时访问而无需凭证。',
   );
 
   mountR2Auth(presign.command('get')
-    .description('Generate a presigned GET URL for an object')
-    .requiredOption('-b, --bucket <bucket>', 'Bucket name')
-    .requiredOption('-k, --key <key>', 'Object key')
-    .option('-e, --expires <seconds>', 'URL lifetime in seconds (default 900)', '900'))
+    .description('Generate a presigned GET URL for an object. 为对象生成预签名 GET URL，允许临时下载该对象。')
+    .requiredOption('-b, --bucket <bucket>', 'Bucket name. 存储桶名称。')
+    .requiredOption('-k, --key <key>', 'Object key. 对象键。')
+    .option('-e, --expires <seconds>', 'URL lifetime in seconds (default 900). URL 有效期（秒）。', '900'))
     .action(async (options) => {
       try {
         const s3cfg = resolveS3Config(program.opts(), options);
@@ -427,12 +439,14 @@ function r2Commands(program) {
     });
 
   mountR2Auth(presign.command('put')
-    .description('Generate a presigned PUT URL so a client can upload without credentials')
-    .requiredOption('-b, --bucket <bucket>', 'Bucket name')
-    .requiredOption('-k, --key <key>', 'Object key')
-    .option('--content-type <type>', 'Enforce this Content-Type on the uploader')
-    .option('--content-length <N>', 'Enforce a specific exact content-length')
-    .option('-e, --expires <seconds>', 'URL lifetime in seconds (default 900)', '900'))
+    .description(
+      'Generate a presigned PUT URL so a client can upload without credentials. 为对象生成预签名 PUT URL，允许客户端无需凭证即可上传文件。'
+    )
+    .requiredOption('-b, --bucket <bucket>', 'Bucket name. 存储桶名称。')
+    .requiredOption('-k, --key <key>', 'Object key. 对象键。')
+    .option('--content-type <type>', 'Enforce this Content-Type on the uploader. 强制上传者使用此 Content-Type。')
+    .option('--content-length <N>', 'Enforce a specific exact content-length. 强制使用特定的 Content-Length。')
+    .option('-e, --expires <seconds>', 'URL lifetime in seconds (default 900). URL 有效期（秒）。', '900'))
     .action(async (options) => {
       try {
         const s3cfg = resolveS3Config(program.opts(), options);

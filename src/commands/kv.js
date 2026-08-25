@@ -159,18 +159,22 @@ function loadKeysFromFile(filePath) {
 /* -------------------------------------------------------------------------- */
 
 function kvCommands(program) {
-  const kv = program.command('kv').description('Manage Workers KV Storage');
+  const kv = program.command('kv').description(
+    'Manage Workers KV Storage. 管理 Workers KV 键值存储，包括命名空间的增删查改以及键值对的读写操作。'
+  );
 
   // ------------------------------ Namespaces -------------------------------
-  const namespaces = kv.command('namespaces').description('Manage KV Namespaces');
+  const namespaces = kv.command('namespaces').description(
+    'Manage KV Namespaces. 管理 KV 命名空间，支持列出、创建和删除命名空间。'
+  );
 
   namespaces
     .command('list')
-    .description('List all KV namespaces')
-    .option('--page <N>', 'Page number (1-based) when --all is not used', '1')
-    .option('--per-page <N>', 'Page size (default 50)', '50')
-    .option('--all', 'Fetch ALL namespaces by auto-paging')
-    .option('-j, --json', 'Output as JSON')
+    .description('List all KV namespaces. 列出账户下所有 KV 命名空间，支持分页和自动翻页获取全部数据。')
+    .option('--page <N>', 'Page number (1-based) when --all is not used. 页码（从 1 开始），仅在未使用 --all 时生效。', '1')
+    .option('--per-page <N>', 'Page size (default 50). 每页返回的命名空间数量。', '50')
+    .option('--all', 'Fetch ALL namespaces by auto-paging. 自动翻页获取所有命名空间。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -202,8 +206,10 @@ function kvCommands(program) {
 
   namespaces
     .command('create')
-    .description('Create a new KV namespace [WRITE — operator approval required]')
-    .requiredOption('-t, --title <title>', 'Namespace title')
+    .description(
+      'Create a new KV namespace [WRITE — operator approval required]. 创建新的 KV 命名空间，需要操作员审批。命名空间标题将用于标识该存储区域。'
+    )
+    .requiredOption('-t, --title <title>', 'Namespace title. 命名空间标题，用于标识该 KV 存储区域。')
     .action(async (options) => {
       try {
         if (!guard(`kv namespaces create (title="${options.title}")`, program)) return;
@@ -215,8 +221,10 @@ function kvCommands(program) {
 
   namespaces
     .command('delete')
-    .description('Delete an entire KV namespace [DESTRUCTIVE — operator approval required]')
-    .requiredOption('-i, --id <id>', 'Namespace ID')
+    .description(
+      'Delete an entire KV namespace [DESTRUCTIVE — operator approval required]. 删除整个 KV 命名空间及其所有键值对，此操作不可逆，需要操作员审批。'
+    )
+    .requiredOption('-i, --id <id>', 'Namespace ID. 要删除的命名空间 ID。')
     .action(async (options) => {
       try {
         if (!guard(`kv namespaces delete (id=${options.id})`, program)) return;
@@ -227,17 +235,21 @@ function kvCommands(program) {
     });
 
   // --------------------------------- Keys ----------------------------------
-  const keys = kv.command('keys').description('Manage KV Keys / Values');
+  const keys = kv.command('keys').description(
+    'Manage KV Keys / Values. 管理 KV 命名空间中的键值对，支持单键读写和批量操作。'
+  );
 
   keys
     .command('list')
-    .description('List keys in a namespace (cursor-based pagination; use --all to page fully)')
-    .requiredOption('-n, --namespace-id <id>', 'Namespace ID')
-    .option('--prefix <prefix>', 'Only return keys starting with this prefix')
-    .option('--limit <limit>', 'Page size (default 1000, max 1000)', '1000')
-    .option('--cursor <cursor>', 'Opaque cursor returned by a previous page')
-    .option('--all', 'Auto-follow cursors until namespace is exhausted')
-    .option('-j, --json', 'Output as JSON')
+    .description(
+      'List keys in a namespace. 列出命名空间中的键列表，支持基于游标的分页，使用 --all 可自动翻页获取全部键。'
+    )
+    .requiredOption('-n, --namespace-id <id>', 'Namespace ID. 命名空间 ID。')
+    .option('--prefix <prefix>', 'Only return keys starting with this prefix. 仅返回以该前缀开头的键。')
+    .option('--limit <limit>', 'Page size (default 1000, max 1000). 每页返回的键数量，最大 1000。', '1000')
+    .option('--cursor <cursor>', 'Opaque cursor returned by a previous page. 上一页返回的不透明游标，用于翻页。')
+    .option('--all', 'Auto-follow cursors until namespace is exhausted. 自动跟随游标直到遍历完所有键。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -276,11 +288,11 @@ function kvCommands(program) {
 
   keys
     .command('get')
-    .description('Get a single value from KV')
-    .requiredOption('-n, --namespace-id <id>', 'Namespace ID')
-    .requiredOption('-k, --key <key>', 'Key name')
-    .option('-o, --out-file <path>', 'Write raw bytes to file (useful for binary)')
-    .option('-j, --json', 'Output metadata + value as JSON object')
+    .description('Get a single value from KV. 从 KV 命名空间中获取单个键的值，支持直接输出或写入文件。')
+    .requiredOption('-n, --namespace-id <id>', 'Namespace ID. 命名空间 ID。')
+    .requiredOption('-k, --key <key>', 'Key name. 要获取的键名。')
+    .option('-o, --out-file <path>', 'Write raw bytes to file (useful for binary). 将原始内容写入文件（适用于二进制数据）。')
+    .option('-j, --json', 'Output metadata + value as JSON object. 以 JSON 对象格式输出元数据和值。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -299,14 +311,16 @@ function kvCommands(program) {
 
   keys
     .command('put')
-    .description('Put a single value into KV [WRITE — operator approval required]')
-    .requiredOption('-n, --namespace-id <id>', 'Namespace ID')
-    .requiredOption('-k, --key <key>', 'Key name')
-    .option('-v, --value <value>', 'Value string')
-    .option('-f, --from-file <path>', 'Read value from file (supersedes --value)')
-    .option('--ttl <seconds>', 'Expiration TTL in seconds (must be >= 60)')
-    .option('--expiration <unix>', 'Unix timestamp (seconds) at which key expires')
-    .option('--meta <json>', 'Metadata object as JSON string')
+    .description(
+      'Put a single value into KV [WRITE — operator approval required]. 向 KV 命名空间写入单个键值对，支持设置过期时间和元数据，需要操作员审批。'
+    )
+    .requiredOption('-n, --namespace-id <id>', 'Namespace ID. 命名空间 ID。')
+    .requiredOption('-k, --key <key>', 'Key name. 要写入的键名。')
+    .option('-v, --value <value>', 'Value string. 要写入的值（与 --from-file 二选一）。')
+    .option('-f, --from-file <path>', 'Read value from file (supersedes --value). 从文件读取值（优先于 --value）。')
+    .option('--ttl <seconds>', 'Expiration TTL in seconds (must be >= 60). 过期时间（秒），必须 >= 60。')
+    .option('--expiration <unix>', 'Unix timestamp (seconds) at which key expires. 键过期的 Unix 时间戳（秒）。')
+    .option('--meta <json>', 'Metadata object as JSON string. 元数据对象，JSON 字符串格式。')
     .action(async (options) => {
       try {
         if (!guard(`kv keys put (ns=${options.namespaceId}, key=${options.key})`, program)) return;
@@ -329,9 +343,11 @@ function kvCommands(program) {
 
   keys
     .command('delete')
-    .description('Delete a single KV key [DESTRUCTIVE — operator approval required]')
-    .requiredOption('-n, --namespace-id <id>', 'Namespace ID')
-    .requiredOption('-k, --key <key>', 'Key name')
+    .description(
+      'Delete a single KV key [DESTRUCTIVE — operator approval required]. 删除 KV 命名空间中的单个键，此操作不可逆，需要操作员审批。'
+    )
+    .requiredOption('-n, --namespace-id <id>', 'Namespace ID. 命名空间 ID。')
+    .requiredOption('-k, --key <key>', 'Key name. 要删除的键名。')
     .action(async (options) => {
       try {
         if (!guard(`kv keys delete (ns=${options.namespaceId}, key=${options.key})`, program)) return;
@@ -345,12 +361,11 @@ function kvCommands(program) {
   keys
     .command('bulk-write')
     .description(
-      'Write many KV pairs in bulk (auto-chunked ≤ 9000 pairs, ≤ 90 MB) '
-      + '[DESTRUCTIVE — operator approval required]',
+      'Write many KV pairs in bulk [DESTRUCTIVE — operator approval required]. 批量写入 KV 键值对（自动分块，每次最多 9000 对或 90 MB），需要操作员审批。',
     )
-    .requiredOption('-n, --namespace-id <id>', 'Namespace ID')
-    .requiredOption('-f, --file <path>', '.json / .csv / .ndjson file with KV pairs')
-    .option('--dry-run', 'Only parse + summarize the file; do NOT call Cloudflare')
+    .requiredOption('-n, --namespace-id <id>', 'Namespace ID. 命名空间 ID。')
+    .requiredOption('-f, --file <path>', '.json / .csv / .ndjson file with KV pairs. 包含键值对的文件路径，支持 .json/.csv/.ndjson 格式。')
+    .option('--dry-run', 'Only parse + summarize the file; do NOT call Cloudflare. 仅解析和汇总文件内容，不调用 Cloudflare API。')
     .action(async (options) => {
       try {
         const pairs = loadPairsFromFile(options.file);
@@ -382,12 +397,14 @@ function kvCommands(program) {
 
   keys
     .command('bulk-get')
-    .description('Read many KV values by key list (auto-chunked ≤ 5000 keys per request)')
-    .requiredOption('-n, --namespace-id <id>', 'Namespace ID')
-    .option('-k, --keys <csv>', 'Inline key list (comma-separated)')
-    .option('-f, --file <path>', 'Key list file (.txt one-per-line, .json array, .csv first col)')
-    .option('-o, --out <path>', 'Write output as JSON array to file')
-    .option('-j, --json', 'Output results as JSON')
+    .description(
+      'Read many KV values by key list. 批量读取 KV 键值对（自动分块，每次最多 5000 个键），支持内联键列表或从文件读取。'
+    )
+    .requiredOption('-n, --namespace-id <id>', 'Namespace ID. 命名空间 ID。')
+    .option('-k, --keys <csv>', 'Inline key list (comma-separated). 内联键列表，逗号分隔。')
+    .option('-f, --file <path>', 'Key list file (.txt one-per-line, .json array, .csv first col). 键列表文件，支持 .txt（每行一个）、.json（数组）、.csv（第一列）。')
+    .option('-o, --out <path>', 'Write output as JSON array to file. 将结果以 JSON 数组格式写入文件。')
+    .option('-j, --json', 'Output results as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         if (!options.keys && !options.file) {
@@ -433,13 +450,12 @@ function kvCommands(program) {
   keys
     .command('bulk-delete')
     .description(
-      'Delete many KV keys in bulk (auto-chunked ≤ 9000 keys) '
-      + '[DESTRUCTIVE — operator approval required]',
+      'Delete many KV keys in bulk [DESTRUCTIVE — operator approval required]. 批量删除 KV 键（自动分块，每次最多 9000 个键），此操作不可逆，需要操作员审批。'
     )
-    .requiredOption('-n, --namespace-id <id>', 'Namespace ID')
-    .option('-k, --keys <csv>', 'Inline key list (comma-separated)')
-    .option('-f, --file <path>', 'Key list file (.txt one-per-line, .json array, .csv first col)')
-    .option('--dry-run', 'Only parse + count; do NOT call Cloudflare')
+    .requiredOption('-n, --namespace-id <id>', 'Namespace ID. 命名空间 ID。')
+    .option('-k, --keys <csv>', 'Inline key list (comma-separated). 内联键列表，逗号分隔。')
+    .option('-f, --file <path>', 'Key list file (.txt one-per-line, .json array, .csv first col). 键列表文件，支持 .txt（每行一个）、.json（数组）、.csv（第一列）。')
+    .option('--dry-run', 'Only parse + count; do NOT call Cloudflare. 仅解析和计数，不调用 Cloudflare API。')
     .action(async (options) => {
       try {
         if (!options.keys && !options.file) {

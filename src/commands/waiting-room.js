@@ -1,14 +1,23 @@
+/**
+ * Cloudflare Waiting Room 命令模块。
+ *
+ * 管理 Cloudflare 等候室功能，用于在高流量事件期间控制网站访问。
+ * 等候室可以在网站过载时将访客放入队列中，确保站点稳定运行。
+ * 支持创建、更新、启用/禁用等候室，以及查看等候室状态和事件。
+ */
+
 const CloudflareClient = require('../utils/cf-client');
 const { formatSuccess, formatError, formatTable, formatJson, formatInfo } = require('../utils/formatter');
 
 function waitingRoomCommands(program) {
-  const wr = program.command('waiting-room').description('Manage Cloudflare Waiting Room');
+  const wr = program.command('waiting-room')
+    .description('管理 Cloudflare 等候室 (Waiting Room)，用于在高流量期间控制网站访问，将过载的访客放入队列');
 
   wr
     .command('list')
-    .description('List all waiting rooms')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
-    .option('-j, --json', 'Output as JSON')
+    .description('列出所有等候室。显示当前区域配置的所有等候室列表，包括名称、主机名、路径、队列状态等基本信息。适用于查看现有等候室配置或进行批量管理。')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID）。如果不指定，则使用配置文件中默认的区域 ID')
+    .option('-j, --json', '以 JSON 格式输出结果，便于程序化解析或脚本处理')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -23,22 +32,22 @@ function waitingRoomCommands(program) {
             description: room.description || '-',
             host: room.host,
             path: room.path || '/',
-            queue_all: room.queue_all ? 'Yes' : 'No',
+            queue_all: room.queue_all ? '是' : '否',
             new_users_per_minute: room.new_users_per_minute || '-',
             total_active_users: room.total_active_users || '-',
-            disabled: room.disabled ? 'Yes' : 'No'
+            disabled: room.disabled ? '是' : '否'
           }));
           formatTable(data, [
             { header: 'ID', accessor: 'id' },
-            { header: 'Name', accessor: 'name' },
-            { header: 'Host', accessor: 'host' },
-            { header: 'Path', accessor: 'path' },
-            { header: 'Queue All', accessor: 'queue_all' },
-            { header: 'New Users/min', accessor: 'new_users_per_minute' },
-            { header: 'Active Users', accessor: 'total_active_users' },
-            { header: 'Disabled', accessor: 'disabled' }
+            { header: '名称', accessor: 'name' },
+            { header: '主机名', accessor: 'host' },
+            { header: '路径', accessor: 'path' },
+            { header: '全部排队', accessor: 'queue_all' },
+            { header: '每分钟新用户数', accessor: 'new_users_per_minute' },
+            { header: '活跃用户数', accessor: 'total_active_users' },
+            { header: '已禁用', accessor: 'disabled' }
           ]);
-          formatSuccess(`Found ${data.length} waiting room(s)`);
+          formatSuccess(`找到 ${data.length} 个等候室`);
         }
       } catch (error) {
         formatError(error.message);
@@ -47,10 +56,10 @@ function waitingRoomCommands(program) {
 
   wr
     .command('get')
-    .description('Get a waiting room details')
-    .requiredOption('-i, --id <id>', 'Waiting room ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
-    .option('-j, --json', 'Output as JSON')
+    .description('获取等候室详细信息。显示指定等候室的完整配置，包括阈值设置、会话持续时间等。适用于查看特定等候室的详细配置或排查问题。')
+    .requiredOption('-i, --id <id>', '等候室 ID（Waiting Room ID），唯一标识一个等候室')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID）。如果不指定，则使用配置文件中默认的区域 ID')
+    .option('-j, --json', '以 JSON 格式输出结果，便于程序化解析或脚本处理')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -66,22 +75,22 @@ function waitingRoomCommands(program) {
             description: room.description || '-',
             host: room.host,
             path: room.path || '/',
-            queue_all: room.queue_all ? 'Yes' : 'No',
+            queue_all: room.queue_all ? '是' : '否',
             new_users_per_minute: room.new_users_per_minute || '-',
             total_active_users: room.total_active_users || '-',
             session_duration: room.session_duration || '-',
-            disabled: room.disabled ? 'Yes' : 'No',
+            disabled: room.disabled ? '是' : '否',
             created_on: room.created_on || '-',
             modified_on: room.modified_on || '-'
           }], [
             { header: 'ID', accessor: 'id' },
-            { header: 'Name', accessor: 'name' },
-            { header: 'Host', accessor: 'host' },
-            { header: 'Path', accessor: 'path' },
-            { header: 'Queue All', accessor: 'queue_all' },
-            { header: 'New Users/min', accessor: 'new_users_per_minute' },
-            { header: 'Active Users', accessor: 'total_active_users' },
-            { header: 'Session Duration', accessor: 'session_duration' }
+            { header: '名称', accessor: 'name' },
+            { header: '主机名', accessor: 'host' },
+            { header: '路径', accessor: 'path' },
+            { header: '全部排队', accessor: 'queue_all' },
+            { header: '每分钟新用户数', accessor: 'new_users_per_minute' },
+            { header: '活跃用户数', accessor: 'total_active_users' },
+            { header: '会话持续时间', accessor: 'session_duration' }
           ]);
         }
       } catch (error) {
@@ -91,9 +100,9 @@ function waitingRoomCommands(program) {
 
   wr
     .command('status')
-    .description('Get waiting room status')
-    .requiredOption('-i, --id <id>', 'Waiting room ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description('获取等候室实时状态。显示等候室的当前运行状态，包括是否处于活动事件、队列是否已满、排队用户数等。适用于监控等候室实时运行状况。')
+    .requiredOption('-i, --id <id>', '等候室 ID（Waiting Room ID），唯一标识一个等候室')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID）。如果不指定，则使用配置文件中默认的区域 ID')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -101,19 +110,19 @@ function waitingRoomCommands(program) {
         const status = result.result;
 
         formatTable([{
-          status: status.status || 'unknown',
-          event_active: status.event_active ? 'Yes' : 'No',
-          queue_is_full: status.queue_is_full ? 'Yes' : 'No',
-          estimated_queued_users: status.estimated_queued_users || 0,
-          estimated_total_active_users: status.estimated_total_active_users || 0,
-          max_queued_users: status.max_queued_users || 0
+          status: status.status || '未知',
+          event_active: status.event_active ? '是' : '否',
+          queue_is_full: status.queue_is_full ? '是' : '否',
+          estimated_queued_users: status.estimated_queued_users || '-',
+          estimated_total_active_users: status.estimated_total_active_users || '-',
+          max_queued_users: status.max_queued_users || '-'
         }], [
-          { header: 'Status', accessor: 'status' },
-          { header: 'Event Active', accessor: 'event_active' },
-          { header: 'Queue Full', accessor: 'queue_is_full' },
-          { header: 'Queued Users', accessor: 'estimated_queued_users' },
-          { header: 'Active Users', accessor: 'estimated_total_active_users' },
-          { header: 'Max Queued', accessor: 'max_queued_users' }
+          { header: '状态', accessor: 'status' },
+          { header: '事件活动', accessor: 'event_active' },
+          { header: '队列已满', accessor: 'queue_is_full' },
+          { header: '排队用户数', accessor: 'estimated_queued_users' },
+          { header: '活跃用户数', accessor: 'estimated_total_active_users' },
+          { header: '最大排队数', accessor: 'max_queued_users' }
         ]);
       } catch (error) {
         formatError(error.message);
@@ -122,15 +131,15 @@ function waitingRoomCommands(program) {
 
   wr
     .command('create')
-    .description('Create a new waiting room')
-    .requiredOption('-n, --name <name>', 'Waiting room name')
-    .requiredOption('--host <host>', 'Host (e.g., example.com)')
-    .requiredOption('--path <path>', 'Path (e.g., /api/*)')
-    .option('--new-users <count>', 'New users per minute threshold', '100')
-    .option('--total-users <count>', 'Total active users threshold', '1000')
-    .option('--queue-all', 'Queue all traffic', false)
-    .option('--session-duration <seconds>', 'Session duration in seconds', '300')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description('创建新的等候室。为指定主机名和路径创建一个新的等候室配置，可以设置流量阈值来控制何时启用排队。适用于为高流量事件做准备或保护关键页面。')
+    .requiredOption('-n, --name <name>', '等候室名称，用于标识该等候室的显示名称')
+    .requiredOption('--host <host>', '主机名（例如：example.com），指定要保护的域名')
+    .requiredOption('--path <path>', '路径（例如：/api/*），指定要保护的 URL 路径，支持通配符')
+    .option('--new-users <count>', '每分钟新用户数阈值，当每分钟新用户数超过此值时启用排队。有效值：正整数。默认值：100', '100')
+    .option('--total-users <count>', '总活跃用户数阈值，当活跃用户数超过此值时启用排队。有效值：正整数。默认值：1000', '1000')
+    .option('--queue-all', '是否对所有流量排队，而不仅仅是超出阈值的流量。默认值：false', false)
+    .option('--session-duration <seconds>', '会话持续时间（秒），用户在队列中等待的时间。有效值：正整数。默认值：300', '300')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID）。如果不指定，则使用配置文件中默认的区域 ID')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -146,7 +155,7 @@ function waitingRoomCommands(program) {
         };
 
         const result = await client.createWaitingRoom(options.zoneId, data);
-        formatSuccess(`Waiting room created: ${result.result.id}`);
+        formatSuccess(`等候室已创建：${result.result.id}`);
       } catch (error) {
         formatError(error.message);
       }
@@ -154,17 +163,17 @@ function waitingRoomCommands(program) {
 
   wr
     .command('update')
-    .description('Update a waiting room')
-    .requiredOption('-i, --id <id>', 'Waiting room ID')
-    .option('-n, --name <name>', 'Waiting room name')
-    .option('--host <host>', 'Host')
-    .option('--path <path>', 'Path')
-    .option('--new-users <count>', 'New users per minute threshold')
-    .option('--total-users <count>', 'Total active users threshold')
-    .option('--queue-all', 'Queue all traffic', true)
-    .option('--no-queue-all', 'Disable queue all traffic', false)
-    .option('--session-duration <seconds>', 'Session duration in seconds')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description('更新等候室配置。修改现有等候室的各项参数，如阈值、名称、路径等。适用于调整等候室设置以适应流量模式变化。')
+    .requiredOption('-i, --id <id>', '等候室 ID（Waiting Room ID），唯一标识要更新的等候室')
+    .option('-n, --name <name>', '新的等候室名称')
+    .option('--host <host>', '新的主机名')
+    .option('--path <path>', '新的路径')
+    .option('--new-users <count>', '新的每分钟新用户数阈值。有效值：正整数')
+    .option('--total-users <count>', '新的总活跃用户数阈值。有效值：正整数')
+    .option('--queue-all', '启用对所有流量排队', true)
+    .option('--no-queue-all', '禁用对所有流量排队', false)
+    .option('--session-duration <seconds>', '新的会话持续时间（秒）。有效值：正整数')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID）。如果不指定，则使用配置文件中默认的区域 ID')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -179,12 +188,12 @@ function waitingRoomCommands(program) {
         if (options.sessionDuration) data.session_duration = parseInt(options.sessionDuration, 10);
 
         if (Object.keys(data).length === 0) {
-          formatError('Please specify at least one option to update');
+          formatError('请至少指定一个要更新的选项');
           return;
         }
 
         const result = await client.updateWaitingRoom(options.id, options.zoneId, data);
-        formatSuccess(`Waiting room updated: ${result.result.id}`);
+        formatSuccess(`等候室已更新：${result.result.id}`);
       } catch (error) {
         formatError(error.message);
       }
@@ -192,16 +201,16 @@ function waitingRoomCommands(program) {
 
   wr
     .command('enable')
-    .description('Enable a waiting room')
-    .requiredOption('-i, --id <id>', 'Waiting room ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description('启用等候室。将已禁用的等候室重新激活，使其开始监控流量并在需要时启用排队。适用于在流量高峰前预先启用等候室。')
+    .requiredOption('-i, --id <id>', '等候室 ID（Waiting Room ID），唯一标识要启用的等候室')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID）。如果不指定，则使用配置文件中默认的区域 ID')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
         const result = await client.updateWaitingRoom(options.id, options.zoneId, {
           disabled: false
         });
-        formatSuccess(`Waiting room enabled: ${result.result.id}`);
+        formatSuccess(`等候室已启用：${result.result.id}`);
       } catch (error) {
         formatError(error.message);
       }
@@ -209,16 +218,16 @@ function waitingRoomCommands(program) {
 
   wr
     .command('disable')
-    .description('Disable a waiting room')
-    .requiredOption('-i, --id <id>', 'Waiting room ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description('禁用等候室。临时停用等候室，使其不再监控流量或启用排队。适用于维护期间或不再需要排队保护时。')
+    .requiredOption('-i, --id <id>', '等候室 ID（Waiting Room ID），唯一标识要禁用的等候室')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID）。如果不指定，则使用配置文件中默认的区域 ID')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
         const result = await client.updateWaitingRoom(options.id, options.zoneId, {
           disabled: true
         });
-        formatSuccess(`Waiting room disabled: ${result.result.id}`);
+        formatSuccess(`等候室已禁用：${result.result.id}`);
       } catch (error) {
         formatError(error.message);
       }
@@ -226,14 +235,14 @@ function waitingRoomCommands(program) {
 
   wr
     .command('delete')
-    .description('Delete a waiting room')
-    .requiredOption('-i, --id <id>', 'Waiting room ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description('删除等候室。永久移除指定的等候室配置。此操作不可逆，请谨慎使用。适用于清理不再需要的等候室配置。')
+    .requiredOption('-i, --id <id>', '等候室 ID（Waiting Room ID），唯一标识要删除的等候室')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID）。如果不指定，则使用配置文件中默认的区域 ID')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
         const result = await client.deleteWaitingRoom(options.id, options.zoneId);
-        formatSuccess(`Waiting room deleted: ${result.result.id}`);
+        formatSuccess(`等候室已删除：${result.result.id}`);
       } catch (error) {
         formatError(error.message);
       }
@@ -241,10 +250,10 @@ function waitingRoomCommands(program) {
 
   wr
     .command('events')
-    .description('List events for a waiting room')
-    .requiredOption('-i, --id <id>', 'Waiting room ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
-    .option('-j, --json', 'Output as JSON')
+    .description('列出等候室事件。显示与指定等候室相关的所有事件，包括事件名称、开始时间、结束时间和描述。适用于查看历史事件或管理计划事件。')
+    .requiredOption('-i, --id <id>', '等候室 ID（Waiting Room ID），唯一标识要查看事件的等候室')
+    .option('-z, --zone-id <zoneId>', '区域 ID（Zone ID）。如果不指定，则使用配置文件中默认的区域 ID')
+    .option('-j, --json', '以 JSON 格式输出结果，便于程序化解析或脚本处理')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -262,12 +271,12 @@ function waitingRoomCommands(program) {
           }));
           formatTable(data, [
             { header: 'ID', accessor: 'id' },
-            { header: 'Name', accessor: 'name' },
-            { header: 'Start Time', accessor: 'event_start_time' },
-            { header: 'End Time', accessor: 'event_end_time' },
-            { header: 'Description', accessor: 'description' }
+            { header: '事件名称', accessor: 'name' },
+            { header: '开始时间', accessor: 'event_start_time' },
+            { header: '结束时间', accessor: 'event_end_time' },
+            { header: '描述', accessor: 'description' }
           ]);
-          formatSuccess(`Found ${data.length} event(s)`);
+          formatSuccess(`找到 ${data.length} 个事件`);
         }
       } catch (error) {
         formatError(error.message);

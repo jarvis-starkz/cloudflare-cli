@@ -51,19 +51,25 @@ function guard(opName, program) {
 /* -------------------------------------------------------------------------- */
 
 function wafCommands(program) {
-  const waf = program.command('waf').description('Manage WAF (Web Application Firewall)');
+  const waf = program.command('waf').description(
+    'Manage WAF (Web Application Firewall). 管理 Web 应用防火墙，包括 Legacy WAF 的包/组/规则/速率限制，以及 WAF Rulesets v2 引擎。'
+  );
 
   // ------------------------------- Packages --------------------------------
-  const packages = waf.command('packages').description('Manage Legacy WAF Packages');
+  const packages = waf.command('packages').description(
+    'Manage Legacy WAF Packages. 管理 Legacy WAF 包，每个包包含一组规则组，用于控制特定应用或路径的防护策略。'
+  );
 
   packages
     .command('list')
-    .description('List all legacy WAF packages')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
-    .option('--page <N>', 'Page number (1-based) when --all is not used', '1')
-    .option('--per-page <N>', 'Page size (default 50)', '50')
-    .option('--all', 'Fetch ALL packages by auto-paging')
-    .option('-j, --json', 'Output as JSON')
+    .description(
+      'List all legacy WAF packages. 列出指定 Zone 的所有 Legacy WAF 包，支持分页获取全部数据。'
+    )
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
+    .option('--page <N>', 'Page number (1-based) when --all is not used. 页码（从 1 开始），仅在未指定 --all 时生效。', '1')
+    .option('--per-page <N>', 'Page size (default 50). 每页返回的包数量。', '50')
+    .option('--all', 'Fetch ALL packages by auto-paging. 自动分页获取所有包，忽略 --page 参数。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -101,10 +107,12 @@ function wafCommands(program) {
 
   packages
     .command('get')
-    .description('Get a legacy WAF package details')
-    .requiredOption('-p, --package-id <packageId>', 'Package ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
-    .option('-j, --json', 'Output as JSON')
+    .description(
+      'Get a legacy WAF package details. 获取指定 Legacy WAF 包的详细信息，包括名称、描述、检测模式和动作模式。'
+    )
+    .requiredOption('-p, --package-id <packageId>', 'Package ID. WAF 包的唯一标识符。')
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -128,12 +136,14 @@ function wafCommands(program) {
 
   packages
     .command('update')
-    .description('Update a legacy WAF package sensitivity / action / status')
-    .requiredOption('-p, --package-id <packageId>', 'Package ID')
-    .option('--sensitivity <sensitivity>', 'Sensitivity level (low, medium, high)')
-    .option('--action-mode <mode>', 'Action mode (simulate, block, challenge)')
-    .option('--status <status>', 'Status (on, off)')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description(
+      'Update a legacy WAF package sensitivity / action / status. 更新 Legacy WAF 包的灵敏度、动作模式或状态，用于调整防护级别和响应行为。[DESTRUCTIVE — needs approval]'
+    )
+    .requiredOption('-p, --package-id <packageId>', 'Package ID. WAF 包的唯一标识符。')
+    .option('--sensitivity <sensitivity>', 'Sensitivity level (low, medium, high). 灵敏度级别：low（低）、medium（中）、high（高）。')
+    .option('--action-mode <mode>', 'Action mode (simulate, block, challenge). 动作模式：simulate（模拟）、block（阻止）、challenge（质询）。')
+    .option('--status <status>', 'Status (on, off). 包状态：on（启用）、off（禁用）。')
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
     .action(async (options) => {
       try {
         if (!guard(`waf packages update (pkg=${options.packageId})`, program)) return;
@@ -151,17 +161,21 @@ function wafCommands(program) {
     });
 
   // -------------------------------- Groups ---------------------------------
-  const groups = waf.command('groups').description('Manage Legacy WAF Groups');
+  const groups = waf.command('groups').description(
+    'Manage Legacy WAF Groups. 管理 Legacy WAF 规则组，每个组包含一组相关规则，可统一启用或禁用。'
+  );
 
   groups
     .command('list')
-    .description('List WAF groups inside a package')
-    .requiredOption('-p, --package-id <packageId>', 'Package ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
-    .option('--page <N>', 'Page number (1-based) when --all is not used', '1')
-    .option('--per-page <N>', 'Page size (default 50)', '50')
-    .option('--all', 'Fetch ALL groups by auto-paging')
-    .option('-j, --json', 'Output as JSON')
+    .description(
+      'List WAF groups inside a package. 列出指定 WAF 包中的所有规则组，支持分页获取全部数据。'
+    )
+    .requiredOption('-p, --package-id <packageId>', 'Package ID. WAF 包的唯一标识符。')
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
+    .option('--page <N>', 'Page number (1-based) when --all is not used. 页码（从 1 开始），仅在未指定 --all 时生效。', '1')
+    .option('--per-page <N>', 'Page size (default 50). 每页返回的规则组数量。', '50')
+    .option('--all', 'Fetch ALL groups by auto-paging. 自动分页获取所有规则组，忽略 --page 参数。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -180,7 +194,7 @@ function wafCommands(program) {
         if (options.json) return formatJSON(rows);
         const data = rows.map((g) => ({
           id: g.id, name: g.name, description: g.description || '-',
-          rules_count: g.rules_count || '-', modified_on: g.modified_on || '-',
+          rules_count: Number(g.rules_count) || '-', modified_on: g.modified_on || '-',
         }));
         formatTable([
           { header: 'ID', accessor: 'id' },
@@ -195,11 +209,13 @@ function wafCommands(program) {
 
   groups
     .command('get')
-    .description('Get a WAF group details')
-    .requiredOption('-p, --package-id <packageId>', 'Package ID')
-    .requiredOption('-g, --group-id <groupId>', 'Group ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
-    .option('-j, --json', 'Output as JSON')
+    .description(
+      'Get a WAF group details. 获取指定 WAF 规则组的详细信息，包括名称、描述、规则数量和修改时间。'
+    )
+    .requiredOption('-p, --package-id <packageId>', 'Package ID. WAF 包的唯一标识符。')
+    .requiredOption('-g, --group-id <groupId>', 'Group ID. 规则组的唯一标识符。')
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -210,7 +226,7 @@ function wafCommands(program) {
         const g = result.result;
         formatTable([{
           id: g.id, name: g.name, description: g.description || '-',
-          rules_count: g.rules_count || '-', modified_on: g.modified_on || '-',
+          rules_count: Number(g.rules_count) || '-', modified_on: g.modified_on || '-',
         }], [
           { header: 'ID', accessor: 'id' },
           { header: 'Name', accessor: 'name' },
@@ -223,10 +239,12 @@ function wafCommands(program) {
 
   groups
     .command('enable')
-    .description('Enable all rules in a WAF group [DESTRUCTIVE — needs approval]')
-    .requiredOption('-p, --package-id <packageId>', 'Package ID')
-    .requiredOption('-g, --group-id <groupId>', 'Group ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description(
+      'Enable all rules in a WAF group. 启用指定 WAF 规则组中的所有规则，使防护策略生效。[DESTRUCTIVE — needs approval]'
+    )
+    .requiredOption('-p, --package-id <packageId>', 'Package ID. WAF 包的唯一标识符。')
+    .requiredOption('-g, --group-id <groupId>', 'Group ID. 规则组的唯一标识符。')
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
     .action(async (options) => {
       try {
         if (!guard(`waf groups enable (pkg=${options.packageId}, group=${options.groupId})`, program)) return;
@@ -240,10 +258,12 @@ function wafCommands(program) {
 
   groups
     .command('disable')
-    .description('Disable all rules in a WAF group [DESTRUCTIVE — needs approval]')
-    .requiredOption('-p, --package-id <packageId>', 'Package ID')
-    .requiredOption('-g, --group-id <groupId>', 'Group ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description(
+      'Disable all rules in a WAF group. 禁用指定 WAF 规则组中的所有规则，暂停该组的防护策略。[DESTRUCTIVE — needs approval]'
+    )
+    .requiredOption('-p, --package-id <packageId>', 'Package ID. WAF 包的唯一标识符。')
+    .requiredOption('-g, --group-id <groupId>', 'Group ID. 规则组的唯一标识符。')
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
     .action(async (options) => {
       try {
         if (!guard(`waf groups disable (pkg=${options.packageId}, group=${options.groupId})`, program)) return;
@@ -256,19 +276,23 @@ function wafCommands(program) {
     });
 
   // --------------------------------- Rules ---------------------------------
-  const rules = waf.command('rules').description('Manage Legacy WAF Rules');
+  const rules = waf.command('rules').description(
+    'Manage Legacy WAF Rules. 管理 Legacy WAF 规则，支持查看、启用、禁用、模拟和质询等操作。'
+  );
 
   rules
     .command('list')
-    .description('List WAF rules inside a package')
-    .requiredOption('-p, --package-id <packageId>', 'Package ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
-    .option('--matches-on <matches>', 'Filter by matches (all, any)')
-    .option('--mode <mode>', 'Filter by mode (on, off, default, disable)')
-    .option('--page <N>', 'Page number (1-based) when --all is not used', '1')
-    .option('--per-page <N>', 'Page size (default 50)', '50')
-    .option('--all', 'Fetch ALL rules by auto-paging')
-    .option('-j, --json', 'Output as JSON')
+    .description(
+      'List WAF rules inside a package. 列出指定 WAF 包中的所有规则，支持按匹配模式和状态过滤。'
+    )
+    .requiredOption('-p, --package-id <packageId>', 'Package ID. WAF 包的唯一标识符。')
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
+    .option('--matches-on <matches>', 'Filter by matches (all, any). 按匹配条件过滤：all（全部匹配）、any（任意匹配）。')
+    .option('--mode <mode>', 'Filter by mode (on, off, default, disable). 按模式过滤：on（启用）、off（禁用）、default（默认）、disable（已禁用）。')
+    .option('--page <N>', 'Page number (1-based) when --all is not used. 页码（从 1 开始），仅在未指定 --all 时生效。', '1')
+    .option('--per-page <N>', 'Page size (default 50). 每页返回的规则数量。', '50')
+    .option('--all', 'Fetch ALL rules by auto-paging. 自动分页获取所有规则，忽略 --page 参数。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -307,11 +331,13 @@ function wafCommands(program) {
 
   rules
     .command('get')
-    .description('Get a WAF rule details')
-    .requiredOption('-p, --package-id <packageId>', 'Package ID')
-    .requiredOption('-r, --rule-id <ruleId>', 'Rule ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
-    .option('-j, --json', 'Output as JSON')
+    .description(
+      'Get a WAF rule details. 获取指定 WAF 规则的详细信息，包括描述、优先级、所属组和允许的模式。'
+    )
+    .requiredOption('-p, --package-id <packageId>', 'Package ID. WAF 包的唯一标识符。')
+    .requiredOption('-r, --rule-id <ruleId>', 'Rule ID. 规则的唯一标识符。')
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -340,10 +366,12 @@ function wafCommands(program) {
     const modeMap = { enable: 'on', disable: 'off', challenge: 'challenge', simulate: 'simulate' };
     rules
       .command(modeOp)
-      .description(`Set a WAF rule to ${modeMap[modeOp]} mode [DESTRUCTIVE — needs approval]`)
-      .requiredOption('-p, --package-id <packageId>', 'Package ID')
-      .requiredOption('-r, --rule-id <ruleId>', 'Rule ID')
-      .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+      .description(
+        `Set a WAF rule to ${modeMap[modeOp]} mode. 将指定 WAF 规则设置为 ${modeMap[modeOp]} 模式。[DESTRUCTIVE — needs approval]`
+      )
+      .requiredOption('-p, --package-id <packageId>', 'Package ID. WAF 包的唯一标识符。')
+      .requiredOption('-r, --rule-id <ruleId>', 'Rule ID. 规则的唯一标识符。')
+      .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
       .action(async (options) => {
         try {
           if (!guard(`waf rules ${modeOp} (rule=${options.ruleId})`, program)) return;
@@ -357,16 +385,20 @@ function wafCommands(program) {
   });
 
   // ------------------------------ Rate Limits ------------------------------
-  const rateLimits = waf.command('rate-limits').description('Manage WAF Rate Limiting Rules');
+  const rateLimits = waf.command('rate-limits').description(
+    'Manage WAF Rate Limiting Rules. 管理 WAF 速率限制规则，用于控制请求频率、防止滥用和 DDoS 攻击。'
+  );
 
   rateLimits
     .command('list')
-    .description('List all rate limiting rules')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
-    .option('--page <N>', 'Page number (1-based) when --all is not used', '1')
-    .option('--per-page <N>', 'Page size (default 50)', '50')
-    .option('--all', 'Fetch ALL rate limit rules by auto-paging')
-    .option('-j, --json', 'Output as JSON')
+    .description(
+      'List all rate limiting rules. 列出指定 Zone 的所有速率限制规则，支持分页获取全部数据。'
+    )
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
+    .option('--page <N>', 'Page number (1-based) when --all is not used. 页码（从 1 开始），仅在未指定 --all 时生效。', '1')
+    .option('--per-page <N>', 'Page size (default 50). 每页返回的规则数量。', '50')
+    .option('--all', 'Fetch ALL rate limit rules by auto-paging. 自动分页获取所有速率限制规则，忽略 --page 参数。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -402,10 +434,12 @@ function wafCommands(program) {
 
   rateLimits
     .command('get')
-    .description('Get a rate limiting rule details')
-    .requiredOption('-i, --id <id>', 'Rule ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
-    .option('-j, --json', 'Output as JSON')
+    .description(
+      'Get a rate limiting rule details. 获取指定速率限制规则的详细信息，包括阈值、周期、动作和关联配置。'
+    )
+    .requiredOption('-i, --id <id>', 'Rule ID. 速率限制规则的唯一标识符。')
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
+    .option('-j, --json', 'Output as JSON. 以 JSON 格式输出结果。')
     .action(async (options) => {
       try {
         const client = new CloudflareClient(program.opts().config);
@@ -413,8 +447,8 @@ function wafCommands(program) {
         if (options.json) return formatJSON(result.result);
         const r = result.result;
         formatTable([{
-          id: r.id, description: r.description || '-', threshold: r.threshold,
-          period: r.period, action: (r.action && r.action.mode) || '-',
+          id: r.id, description: r.description || '-', threshold: r.threshold || '-',
+          period: r.period || '-', action: (r.action && r.action.mode) || '-',
           action_duration: (r.action && r.action.timeout) || '-',
           disabled: r.disabled ? 'Yes' : 'No', correlate: (r.correlated && r.correlated.by) || '-',
         }], [
@@ -431,14 +465,16 @@ function wafCommands(program) {
 
   rateLimits
     .command('create')
-    .description('Create a rate limiting rule [DESTRUCTIVE — needs approval]')
-    .requiredOption('-d, --description <description>', 'Rule description')
-    .requiredOption('-t, --threshold <threshold>', 'Request threshold')
-    .requiredOption('-p, --period <period>', 'Period in seconds (10-86400)')
-    .requiredOption('--action <action>', 'Action (block, challenge, js_challenge, managed_challenge, log)')
-    .option('--action-duration <duration>', 'Action duration in seconds')
-    .option('--url-pattern <pattern>', 'URL pattern to match')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description(
+      'Create a rate limiting rule. 创建新的速率限制规则，用于限制特定 URL 或全站的请求频率。[DESTRUCTIVE — needs approval]'
+    )
+    .requiredOption('-d, --description <description>', 'Rule description. 规则描述，用于标识该规则的用途。')
+    .requiredOption('-t, --threshold <threshold>', 'Request threshold. 请求阈值，在指定周期内允许的最大请求数。')
+    .requiredOption('-p, --period <period>', 'Period in seconds (10-86400). 统计周期（秒），取值范围 10-86400。')
+    .requiredOption('--action <action>', 'Action (block, challenge, js_challenge, managed_challenge, log). 触发后的动作：block（阻止）、challenge（质询）、js_challenge（JS 质询）、managed_challenge（托管质询）、log（记录）。')
+    .option('--action-duration <duration>', 'Action duration in seconds. 动作持续时间（秒），默认 60 秒。')
+    .option('--url-pattern <pattern>', 'URL pattern to match. 要匹配的 URL 模式，不指定则匹配所有请求。')
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
     .action(async (options) => {
       try {
         if (!guard(`waf rate-limits create (desc="${options.description}")`, program)) return;
@@ -460,15 +496,17 @@ function wafCommands(program) {
 
   rateLimits
     .command('update')
-    .description('Update a rate limiting rule [DESTRUCTIVE — needs approval]')
-    .requiredOption('-i, --id <id>', 'Rule ID')
-    .option('-d, --description <description>', 'Rule description')
-    .option('-t, --threshold <threshold>', 'Request threshold')
-    .option('-p, --period <period>', 'Period in seconds')
-    .option('--action <action>', 'Action (block, challenge, js_challenge, managed_challenge, log)')
-    .option('--disabled', 'Disable the rule')
-    .option('--no-disabled', 'Enable the rule')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description(
+      'Update a rate limiting rule. 更新现有速率限制规则的阈值、周期、动作或描述。[DESTRUCTIVE — needs approval]'
+    )
+    .requiredOption('-i, --id <id>', 'Rule ID. 速率限制规则的唯一标识符。')
+    .option('-d, --description <description>', 'Rule description. 规则描述，用于标识该规则的用途。')
+    .option('-t, --threshold <threshold>', 'Request threshold. 请求阈值，在指定周期内允许的最大请求数。')
+    .option('-p, --period <period>', 'Period in seconds. 统计周期（秒）。')
+    .option('--action <action>', 'Action (block, challenge, js_challenge, managed_challenge, log). 触发后的动作：block（阻止）、challenge（质询）、js_challenge（JS 质询）、managed_challenge（托管质询）、log（记录）。')
+    .option('--disabled', 'Disable the rule. 禁用该规则。')
+    .option('--no-disabled', 'Enable the rule. 启用该规则。')
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
     .action(async (options) => {
       try {
         if (!guard(`waf rate-limits update (id=${options.id})`, program)) return;
@@ -489,9 +527,11 @@ function wafCommands(program) {
 
   rateLimits
     .command('delete')
-    .description('Delete a rate limiting rule [DESTRUCTIVE — needs approval]')
-    .requiredOption('-i, --id <id>', 'Rule ID')
-    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone)')
+    .description(
+      'Delete a rate limiting rule. 删除指定的速率限制规则，此操作不可恢复。[DESTRUCTIVE — needs approval]'
+    )
+    .requiredOption('-i, --id <id>', 'Rule ID. 速率限制规则的唯一标识符。')
+    .option('-z, --zone-id <zoneId>', 'Zone ID (defaults to configured zone). 区域 ID，默认使用配置中的区域。')
     .action(async (options) => {
       try {
         if (!guard(`waf rate-limits delete (id=${options.id})`, program)) return;
@@ -505,7 +545,7 @@ function wafCommands(program) {
   /*                 `waf rulesets-v2` — alias to rulesets module           */
   /* ---------------------------------------------------------------------- */
   const v2 = waf.command('rulesets-v2')
-    .description('Enterprise WAF Rulesets Engine v2 (alias for `cfcli rulesets ...`)');
+    .description('Enterprise WAF Rulesets Engine v2 (alias for `cfcli rulesets ...`). 企业版 WAF Rulesets v2 引擎，作为 `cfcli rulesets ...` 的别名，提供一站式 WAF 管理入口。');
   // Reuse rulesets command module — it registers subcommands on the passed
   // commander node. We just alias the command container name.
   try {
@@ -518,7 +558,7 @@ function wafCommands(program) {
     registerRulesetsSubset(v2, rulesetsMod, program);
   } catch (err) {
     v2.command('*')
-      .description('Fallback — rulesets module failed to load')
+      .description('Fallback — rulesets module failed to load. 回退命令 — rulesets 模块加载失败时的占位提示。')
       .action(() => formatError(`Failed to load rulesets module: ${err.message}`));
   }
 }
@@ -564,7 +604,7 @@ function registerRulesetsSubset(aliasNode, rulesetsMod, realProgram) {
     // registering a one-line pointer command instead of crashing.
     aliasNode
       .command('list')
-      .description('Use `cfcli rulesets list` instead (alias tip)')
+      .description('Use `cfcli rulesets list` instead (alias tip). 提示：请使用顶层命令 `cfcli rulesets list` 获取完整的 Rulesets v2 支持。')
       .action(() => {
         formatInfo('Tip: use the top-level `cfcli rulesets ...` command for full Rulesets v2 support.');
       });

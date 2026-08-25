@@ -48,8 +48,9 @@ const GUI_HTML = `<!DOCTYPE html>
   .card .desc{color:#666;font-size:14px;margin-bottom:16px}
   .options{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .opt{display:flex;flex-direction:column}
-  .opt label{font-size:12px;font-weight:600;margin-bottom:4px}
+  .opt label{font-size:12px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .opt label .flags{font-family:monospace;background:#f0f0f0;padding:1px 4px;border-radius:3px}
+  .opt label .opt-desc{font-weight:400;font-size:11px;color:#8a8a9a;flex:1;min-width:0}
   .opt input,.opt select{padding:6px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px}
   .opt input:focus,.opt select:focus{border-color:#e8741c;outline:none}
   .run-bar{position:sticky;bottom:0;background:#fff;padding:12px 20px;border-top:1px solid #eee;display:flex;gap:12px;align-items:center}
@@ -85,6 +86,56 @@ const GUI_HTML = `<!DOCTYPE html>
 let REG=null,CURRENT=null,ACTIVE_PROFILE=null,PROFILES=[];
 const nav=document.getElementById('nav');
 const content=document.getElementById('content');
+
+// B2: Smart field type inference — auto-detect enum/boolean/numeric
+// Returns {type:'boolean'|'enum'|'number'|'text', values?:string[]}
+function inferFieldType(c,o){
+  const flags=(o.flags||'').toLowerCase();
+  const desc=(o.description||'').toLowerCase();
+  const path=(c.path||'').toLowerCase();
+  // 1. Boolean: flags with --no- or no <value> placeholder
+  if(flags.includes('no-')||!o.flags.includes('<')){
+    return {type:'boolean'};
+  }
+  // 2. Explicit enum markers in description
+  const enumPatterns=[
+    /enum:([a-z0-9,_|-]+)/i,
+    /one of:\s*([a-z0-9,_|-]+)/i,
+    /choices:\s*([a-z0-9,_|-]+)/i,
+    /values:\s*([a-z0-9,_|-]+)/i,
+    /\\(([^)]+\\|[^)]+)\\)/, // (a|b|c) pattern
+  ];
+  for(const pat of enumPatterns){
+    const m=desc.match(pat);
+    if(m){
+      const vals=m[1].split(/[\\,|]/).map(s=>s.trim()).filter(Boolean);
+      if(vals.length>1)return {type:'enum',values:vals};
+    }
+  }
+  // 3. Smart inference based on command path + flag
+  if(path.includes('dns')&&(flags.includes('--type')||flags.match(/-t\\b/))){
+    return {type:'enum',values:['A','AAAA','CNAME','MX','TXT','NS','SOA','SRV','CAA','PTR','SMIMEA','SSHFP','TLSA','URI']};
+  }
+  if(path.includes('ssl')&&flags.includes('--type')){
+    return {type:'enum',values:['off','flexible','full','strict']};
+  }
+  if(path.includes('tls')&&flags.includes('--mode')){
+    return {type:'enum',values:['off','flexible','full','strict']};
+  }
+  if(path.includes('waf')&&flags.includes('--mode')){
+    return {type:'enum',values:['on','off','block','challenge','js_challenge','managed_challenge','log']};
+  }
+  if(path.includes('cache')&&flags.includes('--level')){
+    return {type:'enum',values:['bypass','basic','aggressive','simplified']};
+  }
+  if(flags.includes('--proxied')||flags.includes('--paused')||flags.includes('--enabled')||flags.includes('--active')){
+    return {type:'enum',values:['true','false']};
+  }
+  if(flags.includes('--ttl')||flags.includes('--port')||flags.includes('--page')||flags.includes('--per-page')||flags.includes('--priority')){
+    return {type:'number'};
+  }
+  return {type:'text'};
+}
 
 async function init(){
   const [regResp,profResp]=await Promise.all([fetch('/api/registry'),fetch('/api/profiles')]);
@@ -147,25 +198,23 @@ function renderCmd(c){
   if(opts.length){
     html+='<div class="card"><h3>Options</h3><div class="options">';
     opts.forEach(o=>{
-      const isFlag=o.flags.includes('no-')||!o.flags.includes('<');
-      // B2: Detect enum options — description contains "enum:v1,v2,v3"
-      const enumMatch=o.description.match(/enum:([a-zA-Z0-9,_-]+)/i);
-      html+='<div class="opt"><label><span class="flags">'+o.flags+'</span></label>';
-      if(isFlag){
+      const ft=inferFieldType(c,o);
+      const dv=o.defaultValue||'';
+      const descClean=(o.description||'').replace(/enum:[^ ]+|one of:[^|]+|choices:[^|]+/i,'').trim();
+      html+='<div class="opt"><label><span class="flags">'+o.flags+'</span><span class="opt-desc">'+descClean+'</span></label>';
+      if(ft.type==='boolean'){
         html+='<select data-flag="'+o.flags+'"><option value="">(off)</option><option value="'+o.flags.split(',').pop().trim()+'">(on)</option></select>';
-      }else if(enumMatch){
-        // Render as dropdown with enum values
-        const values=enumMatch[1].split(',');
-        const dv=o.defaultValue||'';
+      }else if(ft.type==='enum'){
         html+='<select data-opt="'+o.flags+'">';
         html+='<option value="">(none)</option>';
-        values.forEach(v=>{
+        ft.values.forEach(v=>{
           html+='<option value="'+v+'"'+(v===dv?' selected':'')+'>'+v+'</option>';
         });
         html+='</select>';
+      }else if(ft.type==='number'){
+        html+='<input type="number" data-opt="'+o.flags+'" placeholder="'+descClean+'" value="'+dv+'">';
       }else{
-        const dv=o.defaultValue||'';
-        html+='<input type="text" data-opt="'+o.flags+'" placeholder="'+o.description.replace(/enum:[^ ]+/i,'').trim()+'" value="'+dv+'">';
+        html+='<input type="text" data-opt="'+o.flags+'" placeholder="'+descClean+'" value="'+dv+'">';
       }
       html+='</div>';
     });

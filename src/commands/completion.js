@@ -222,6 +222,109 @@ function completionModule(program) {
       const registry = buildRegistry(program);
       console.log(generatePowerShell(registry));
     });
+
+  // B6: Auto-install completion to shell config file
+  cmd
+    .command('install')
+    .description('Install completion script to your shell config (bash/zsh/fish/powershell)')
+    .option('-s, --shell <shell>', 'Shell: bash, zsh, fish, powershell (auto-detect if omitted)')
+    .action((options) => {
+      const fs = require('fs');
+      const path = require('path');
+      const os = require('os');
+      const { execSync } = require('child_process');
+
+      const registry = buildRegistry(program);
+
+      // Auto-detect shell
+      let shell = options.shell;
+      if (!shell) {
+        if (process.platform === 'win32') {
+          shell = 'powershell';
+        } else {
+          const envShell = process.env.SHELL || '';
+          if (envShell.includes('zsh')) shell = 'zsh';
+          else if (envShell.includes('fish')) shell = 'fish';
+          else shell = 'bash';
+        }
+      }
+
+      const home = os.homedir();
+      let targetFile, script;
+
+      switch (shell) {
+        case 'bash': {
+          targetFile = path.join(home, '.bashrc');
+          script = generateBash(registry);
+          break;
+        }
+        case 'zsh': {
+          const zshDir = path.join(home, '.zsh', 'completions');
+          if (!fs.existsSync(zshDir)) fs.mkdirSync(zshDir, { recursive: true });
+          targetFile = path.join(zshDir, '_cfcli');
+          // Write directly and add to fpath
+          fs.writeFileSync(targetFile, script || generateZsh(registry));
+          // Check if fpath is already in .zshrc
+          const zshrc = path.join(home, '.zshrc');
+          if (fs.existsSync(zshrc)) {
+            const content = fs.readFileSync(zshrc, 'utf8');
+            if (!content.includes('fpath+=(')) {
+              fs.appendFileSync(zshrc, '\nfpath+=(~/.zsh/completions)\n');
+            }
+          }
+          console.log(`Installed zsh completion to ${targetFile}`);
+          console.log('Restart your shell or run: source ~/.zshrc');
+          return;
+        }
+        case 'fish': {
+          const fishDir = path.join(home, '.config', 'fish', 'completions');
+          if (!fs.existsSync(fishDir)) fs.mkdirSync(fishDir, { recursive: true });
+          targetFile = path.join(fishDir, 'cfcli.fish');
+          fs.writeFileSync(targetFile, generateFish(registry));
+          console.log(`Installed fish completion to ${targetFile}`);
+          console.log('Restart your shell to activate.');
+          return;
+        }
+        case 'powershell': {
+          const psDir = path.join(home, 'Documents', 'PowerShell');
+          if (!fs.existsSync(psDir)) fs.mkdirSync(psDir, { recursive: true });
+          targetFile = path.join(psDir, 'cfcli.ps1');
+          fs.writeFileSync(targetFile, generatePowerShell(registry));
+          // Add to profile
+          const profile = path.join(psDir, 'Microsoft.PowerShell_profile.ps1');
+          let profileContent = '';
+          if (fs.existsSync(profile)) {
+            profileContent = fs.readFileSync(profile, 'utf8');
+          }
+          if (!profileContent.includes('cfcli.ps1')) {
+            fs.writeFileSync(profile, profileContent + `\n. "${targetFile}"\n`);
+          }
+          console.log(`Installed PowerShell completion to ${targetFile}`);
+          console.log('Restart PowerShell to activate.');
+          return;
+        }
+        default:
+          console.error(`Unsupported shell: ${shell}. Use bash, zsh, fish, or powershell.`);
+          process.exitCode = 1;
+          return;
+      }
+
+      // bash: append to .bashrc
+      if (shell === 'bash') {
+        script = generateBash(registry);
+        let existing = '';
+        if (fs.existsSync(targetFile)) {
+          existing = fs.readFileSync(targetFile, 'utf8');
+        }
+        if (existing.includes('# cfcli bash completion')) {
+          console.log('cfcli completion already installed in .bashrc');
+          return;
+        }
+        fs.appendFileSync(targetFile, '\n' + script + '\n');
+        console.log(`Installed bash completion to ${targetFile}`);
+        console.log('Run: source ~/.bashrc');
+      }
+    });
 }
 
 module.exports = completionModule;

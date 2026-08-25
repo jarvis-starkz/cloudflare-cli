@@ -209,30 +209,60 @@ function profileModule(program) {
       }
     });
 
-  // cfcli profile export
+  // cfcli profile export [--with-secrets --passphrase <p>]
   profile
     .command('export')
-    .description('Export profiles as JSON (secrets masked)')
-    .action(() => {
+    .description('Export profiles as JSON (secrets masked by default)')
+    .option('--with-secrets', 'Include secrets in export (encrypted with --passphrase)')
+    .option('--passphrase <passphrase>', 'Encryption passphrase for --with-secrets')
+    .action(async (options) => {
       const profiles = loadProfiles();
       const active = getActiveProfileName();
       const out = {};
-      Object.keys(profiles).forEach(n => {
-        out[n] = { ...profiles[n], _active: n === active };
-        // Mask secrets (they shouldn't be in profiles.json, but just in case)
-        PROFILE_SECRET_KEYS.forEach(k => {
-          if (out[n][k]) out[n][k] = '********';
+
+      if (options.withSecrets) {
+        if (!options.passphrase) {
+          formatError('--passphrase is required when using --with-secrets.');
+          process.exitCode = 1;
+          return;
+        }
+        // Resolve full profiles with secrets from keychain
+        const CryptoJS = require('crypto-js');
+        const { resolveProfile } = require('../utils/profiles');
+
+        for (const name of Object.keys(profiles)) {
+          const full = await resolveProfile(name);
+          out[name] = { ...full, _active: name === active };
+        }
+
+        const jsonStr = JSON.stringify(out, null, 2);
+        const encrypted = CryptoJS.AES.encrypt(jsonStr, options.passphrase).toString();
+        const payload = {
+          _encrypted: true,
+          _version: 1,
+          _created: new Date().toISOString(),
+          data: encrypted,
+        };
+        formatJSON(payload);
+      } else {
+        // Default: mask secrets
+        Object.keys(profiles).forEach(n => {
+          out[n] = { ...profiles[n], _active: n === active };
+          PROFILE_SECRET_KEYS.forEach(k => {
+            if (out[n][k]) out[n][k] = '********';
+          });
         });
-      });
-      formatJSON(out);
+        formatJSON(out);
+      }
     });
 
-  // cfcli profile import --file <f>
+  // cfcli profile import --file <f> [--passphrase <p>]
   profile
     .command('import')
-    .description('Import profiles from a JSON file')
+    .description('Import profiles from a JSON file (supports encrypted exports)')
     .option('-f, --file <file>', 'JSON file to import')
-    .action((options) => {
+    .option('--passphrase <passphrase>', 'Decryption passphrase for encrypted imports')
+    .action(async (options) => {
       if (!options.file) {
         formatError('--file is required.');
         process.exitCode = 1;
@@ -245,8 +275,27 @@ function profileModule(program) {
         return;
       }
       try {
-        const data = JSON.parse(fs.readFileSync(options.file, 'utf8'));
-        const existing = loadProfiles();
+        const raw = JSON.parse(fs.readFileSync(options.file, 'utf8'));
+
+        // Handle encrypted imports
+        let data = raw;
+        if (raw._encrypted && raw.data) {
+          if (!options.passphrase) {
+            formatError('File is encrypted. Use --passphrase to decrypt.');
+            process.exitCode = 1;
+            return;
+          }
+          const CryptoJS = require('crypto-js');
+          const bytes = CryptoJS.AES.decrypt(raw.data, options.passphrase);
+          const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+          if (!decrypted) {
+            formatError('Decryption failed — wrong passphrase.');
+            process.exitCode = 1;
+            return;
+          }
+          data = JSON.parse(decrypted);
+        }
+
         let count = 0;
         Object.keys(data).forEach(name => {
           if (name.startsWith('_')) return;

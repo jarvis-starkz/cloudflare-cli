@@ -95,15 +95,41 @@ function tuiModule(program) {
       // Main command selection loop
       let running = true;
       while (running) {
-        const { selected } = await inquirer.prompt([
-          {
-            type: 'list',
-            name: 'selected',
-            message: 'cfcli — Select a command:',
-            choices,
-            pageSize: 20,
-          },
-        ]);
+      // B3: Fuzzy search — two-step: input filter → list selection
+      // Step 1: ask for search term (empty = show all)
+      const { searchTerm } = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'searchTerm',
+          message: 'Search commands (empty for all,Esc+Enter to skip):',
+        },
+      ]);
+
+      const term = (searchTerm || '').toLowerCase().trim();
+      const filteredChoices = term
+        ? choices.filter(c => {
+            if (c.type === 'separator') return false;
+            const name = (c.name || '').toLowerCase();
+            const path = (c.value || '').path || '';
+            return name.includes(term) || path.toLowerCase().includes(term);
+          })
+        : choices;
+
+      if (filteredChoices.length === 0) {
+        formatInfo('No matching commands. Try again.');
+        continue;
+      }
+
+      // Step 2: select from filtered list
+      const { selected } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'selected',
+          message: `cfcli — Select a command (${filteredChoices.length} matches):`,
+          choices: filteredChoices,
+          pageSize: 20,
+        },
+      ]);
 
         if (selected === 'exit') {
           running = false;

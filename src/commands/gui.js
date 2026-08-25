@@ -148,12 +148,24 @@ function renderCmd(c){
     html+='<div class="card"><h3>Options</h3><div class="options">';
     opts.forEach(o=>{
       const isFlag=o.flags.includes('no-')||!o.flags.includes('<');
+      // B2: Detect enum options — description contains "enum:v1,v2,v3"
+      const enumMatch=o.description.match(/enum:([a-zA-Z0-9,_-]+)/i);
       html+='<div class="opt"><label><span class="flags">'+o.flags+'</span></label>';
       if(isFlag){
         html+='<select data-flag="'+o.flags+'"><option value="">(off)</option><option value="'+o.flags.split(',').pop().trim()+'">(on)</option></select>';
+      }else if(enumMatch){
+        // Render as dropdown with enum values
+        const values=enumMatch[1].split(',');
+        const dv=o.defaultValue||'';
+        html+='<select data-opt="'+o.flags+'">';
+        html+='<option value="">(none)</option>';
+        values.forEach(v=>{
+          html+='<option value="'+v+'"'+(v===dv?' selected':'')+'>'+v+'</option>';
+        });
+        html+='</select>';
       }else{
         const dv=o.defaultValue||'';
-        html+='<input type="text" data-opt="'+o.flags+'" placeholder="'+o.description+'" value="'+dv+'">';
+        html+='<input type="text" data-opt="'+o.flags+'" placeholder="'+o.description.replace(/enum:[^ ]+/i,'').trim()+'" value="'+dv+'">';
       }
       html+='</div>';
     });

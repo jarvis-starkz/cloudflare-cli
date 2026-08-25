@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Syntax check
+        run: |
+          for f in src/index.js src/utils/*.js src/commands/*.js; do
+            node -c "$f" || exit 1
+          done
+
+      - name: Run tests
+        run: npm test
+
+      - name: Generate coverage
+        run: npm run test:cov
+
+      - name: Upload coverage
+        if: matrix.node-version == 20
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+
+      - name: Verify command registry
+        run: node src/index.js commands list
+
+      - name: Verify help smoke test
+        run: |
+          node src/index.js --help
+          node src/index.js dns --help
+          node src/index.js zone --help
+          node src/index.js waf --help
+          node src/index.js kv --help
+          node src/index.js r2 --help
+          node src/index.js profile --help
+          node src/index.js commands list
+          node src/index.js completion bash

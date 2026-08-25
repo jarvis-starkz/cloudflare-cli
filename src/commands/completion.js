@@ -250,20 +250,29 @@ function completionModule(program) {
       }
 
       const home = os.homedir();
-      let targetFile, script;
 
       switch (shell) {
         case 'bash': {
-          targetFile = path.join(home, '.bashrc');
-          script = generateBash(registry);
-          break;
+          const bashFile = path.join(home, '.bashrc');
+          const bashScript = generateBash(registry);
+          let existing = '';
+          if (fs.existsSync(bashFile)) {
+            existing = fs.readFileSync(bashFile, 'utf8');
+          }
+          if (existing.includes('# cfcli bash completion')) {
+            console.log('cfcli completion already installed in .bashrc');
+            return;
+          }
+          fs.appendFileSync(bashFile, '\n' + bashScript + '\n');
+          console.log(`Installed bash completion to ${bashFile}`);
+          console.log('Run: source ~/.bashrc');
+          return;
         }
         case 'zsh': {
           const zshDir = path.join(home, '.zsh', 'completions');
           if (!fs.existsSync(zshDir)) fs.mkdirSync(zshDir, { recursive: true });
-          targetFile = path.join(zshDir, '_cfcli');
-          // Write directly and add to fpath
-          fs.writeFileSync(targetFile, script || generateZsh(registry));
+          const zshFile = path.join(zshDir, '_cfcli');
+          fs.writeFileSync(zshFile, generateZsh(registry));
           // Check if fpath is already in .zshrc
           const zshrc = path.join(home, '.zshrc');
           if (fs.existsSync(zshrc)) {
@@ -272,24 +281,24 @@ function completionModule(program) {
               fs.appendFileSync(zshrc, '\nfpath+=(~/.zsh/completions)\n');
             }
           }
-          console.log(`Installed zsh completion to ${targetFile}`);
+          console.log(`Installed zsh completion to ${zshFile}`);
           console.log('Restart your shell or run: source ~/.zshrc');
           return;
         }
         case 'fish': {
           const fishDir = path.join(home, '.config', 'fish', 'completions');
           if (!fs.existsSync(fishDir)) fs.mkdirSync(fishDir, { recursive: true });
-          targetFile = path.join(fishDir, 'cfcli.fish');
-          fs.writeFileSync(targetFile, generateFish(registry));
-          console.log(`Installed fish completion to ${targetFile}`);
+          const fishFile = path.join(fishDir, 'cfcli.fish');
+          fs.writeFileSync(fishFile, generateFish(registry));
+          console.log(`Installed fish completion to ${fishFile}`);
           console.log('Restart your shell to activate.');
           return;
         }
         case 'powershell': {
           const psDir = path.join(home, 'Documents', 'PowerShell');
           if (!fs.existsSync(psDir)) fs.mkdirSync(psDir, { recursive: true });
-          targetFile = path.join(psDir, 'cfcli.ps1');
-          fs.writeFileSync(targetFile, generatePowerShell(registry));
+          const psFile = path.join(psDir, 'cfcli.ps1');
+          fs.writeFileSync(psFile, generatePowerShell(registry));
           // Add to profile
           const profile = path.join(psDir, 'Microsoft.PowerShell_profile.ps1');
           let profileContent = '';
@@ -297,9 +306,9 @@ function completionModule(program) {
             profileContent = fs.readFileSync(profile, 'utf8');
           }
           if (!profileContent.includes('cfcli.ps1')) {
-            fs.writeFileSync(profile, profileContent + `\n. "${targetFile}"\n`);
+            fs.writeFileSync(profile, profileContent + `\n. "${psFile}"\n`);
           }
-          console.log(`Installed PowerShell completion to ${targetFile}`);
+          console.log(`Installed PowerShell completion to ${psFile}`);
           console.log('Restart PowerShell to activate.');
           return;
         }
@@ -307,22 +316,6 @@ function completionModule(program) {
           console.error(`Unsupported shell: ${shell}. Use bash, zsh, fish, or powershell.`);
           process.exitCode = 1;
           return;
-      }
-
-      // bash: append to .bashrc
-      if (shell === 'bash') {
-        script = generateBash(registry);
-        let existing = '';
-        if (fs.existsSync(targetFile)) {
-          existing = fs.readFileSync(targetFile, 'utf8');
-        }
-        if (existing.includes('# cfcli bash completion')) {
-          console.log('cfcli completion already installed in .bashrc');
-          return;
-        }
-        fs.appendFileSync(targetFile, '\n' + script + '\n');
-        console.log(`Installed bash completion to ${targetFile}`);
-        console.log('Run: source ~/.bashrc');
       }
     });
 }
